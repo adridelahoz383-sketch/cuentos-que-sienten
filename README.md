@@ -1,6 +1,6 @@
 # Cuentos que Sienten · Presentación web del prototipo
 
-Presentación web por diapositivas (12) que explica el prototipo y ejecuta la compilación **real** de Unity (WebGL) dentro del navegador. Se navega con las pestañas numeradas, las flechas laterales, las miniaturas, el teclado (← →) o deslizando en pantallas táctiles. Cada diapositiva tiene su dirección (por ejemplo `#prototipo`).
+Presentación web por diapositivas (13) que explica el prototipo y ejecuta la compilación **real** de Unity (WebGL) dentro del navegador. Se navega con las pestañas numeradas, las flechas laterales, las miniaturas, el teclado (← →) o deslizando en pantallas táctiles. Cada diapositiva tiene su dirección (por ejemplo `#prototipo`).
 
 ## Estructura
 
@@ -139,4 +139,4 @@ unityInstance.SendMessage("WebBridge", "PlayKidAction", "IsClicked");
 - [ ] Adaptar la entrada a pantallas táctiles antes de presentarlo en tabletas.
 - [ ] Sustituir las ilustraciones, animaciones y audios de prueba por los definitivos del cliente.
 - [ ] Actualizar la lista de temas a tratar (`TOPICS` en `script.js`) cuando se resuelva cada punto.
-- [ ] Al modificar `styles.css` o `script.js`, subir el número de versión (`?v=8`) en `index.html` para que los navegadores no muestren la copia vieja guardada en caché.
+- [ ] Al modificar `styles.css` o `script.js`, subir el número de versión (`?v=9`) en `index.html` para que los navegadores no muestren la copia vieja guardada en caché.

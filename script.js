@@ -691,12 +691,30 @@ const VIDEOS = {
     title: "Proceso con sprites",
     chapters: [[0, "Introducción"], [3.5, "1. Importar la hoja de sprites"], [8.5, "2. Cortar en el Sprite Editor"],
       [14.5, "3. Crear el clip de reposo"], [22.5, "4. Crear el clip de pensar"], [30.5, "5. Conectar en el Animator"], [36.5, "Resultado"]],
+    // Archivos reales que intervienen en este proceso (en el orden en que se usan)
+    files: [
+      ["png", "Hoja de sprites del niño", "Hoja de sprites_ niño chibi animado.png · 1983 × 793 px, 16 dibujos (reposo y pensar). Se importa como <b>Sprite (2D and UI)</b> con <b>Sprite Mode: Multiple</b> y se corta en el Sprite Editor."],
+      ["png", "Hoja del saludo", "Sprite de niño saludando.png · 2172 × 724 px, 8 dibujos. Mismo tratamiento que la anterior."],
+      ["anim", "Clips de animación", "AnimationKid, AnimationQuestion y Saludar. Los crea Unity al arrastrar los dibujos a la escena o desde la ventana Animation."],
+      ["controller", "Animator Controller", "AnimatorKid: estados Idle, Saludar y Question, con los parámetros IsClicked e IsDoubleClicked."],
+      ["wav", "Efecto de sonido", "sonido_pensar_kid.wav · 1,1 s, mono, 44,1 kHz. Lo reproduce el Audio Source del niño."],
+      ["cs", "Script", "IsCliked.cs: detecta el clic y el doble clic y activa los triggers."],
+    ],
+    note: "Formatos de imagen que también sirven: <b>.psd</b>, <b>.jpg</b> (sin transparencia, no conviene para personajes) y <b>.aseprite</b> (el proyecto tiene instalado el 2D Aseprite Importer, que convierte sus etiquetas en clips). Se recomienda <b>.png</b> porque guarda la transparencia sin perder calidad.",
   },
   huesos: {
     title: "Proceso con huesos",
     chapters: [[0, "Introducción"], [3.5, "1. Dibujar por capas"], [11, "2. Importar el .psb"], [15.5, "3. Crear los huesos"],
       [23.5, "4. Generar la geometría"], [28.5, "5. Asignar los pesos"], [33.5, "6. Probar poses"],
       [39, "7. Keyframes: respiración"], [45, "8. Keyframes: salto y saludo"], [51, "Resultado"]],
+    files: [
+      ["psb", "Ilustración por capas", "NewChar.psb · 600 × 760 px, 15 capas, 3,7 MB. Lo importa el paquete <b>2D PSD Importer</b>; el esqueleto, la geometría y los pesos se guardan en la configuración de importación de este archivo (su .meta)."],
+      ["anim", "Clips de animación", "NewChar_Idle, NewChar_Clicked y NewChar_Question. Guardan solo rotaciones y escalas de los huesos."],
+      ["controller", "Animator Controller", "AnimatorNewChar: estados Idle, Clicked y Question."],
+      ["png", "Signo de pregunta", "question_mark.png: imagen extra que aparece durante la pregunta."],
+      ["cs", "Script", "IsClickedRig.cs: hover, clic y doble clic de la niña."],
+    ],
+    note: "<b>¿Hace falta un .fbx?</b> No. Con huesos 2D el esqueleto se crea dentro de Unity sobre el .psb, así que no se exporta nada desde otro programa. El <b>.fbx</b> solo se necesita cuando el personaje llega ya armado desde un programa 3D (Blender, Maya, Mixamo) con su esqueleto y sus animaciones: ver la diapositiva <a href=\"#recursos\">Recursos ya hechos</a>. También sirve <b>.psd</b>, pero <b>.psb</b> admite archivos más grandes y es el que recomienda Unity.",
   },
 };
 (function videos() {
@@ -712,6 +730,9 @@ const VIDEOS = {
     video.querySelector("source").src = `assets/video/${key}.mp4?v=${VIDEO_VERSION}`;
     video.load();
     list.innerHTML = v.chapters.map(([t, name], i) => `<li><button data-t="${t}" data-i="${i}">${name}</button></li>`).join("");
+    $("#videoFiles").innerHTML = `<h4>Archivos que usa este proceso</h4>
+      <ul class="file-grid">${v.files.map(([ext, name, desc]) => `<li class="file-chip"><span class="ext ext-${ext}">.${ext}</span><div><b>${name}</b><span>${desc}</span></div></li>`).join("")}</ul>
+      <p class="note note-info">${v.note}</p>`;
     $$("[data-video]").forEach(b => { const on = b.dataset.video === key; b.classList.toggle("active", on); b.setAttribute("aria-selected", on); });
   }
   $$("[data-video]").forEach(b => b.addEventListener("click", () => load(b.dataset.video)));
@@ -729,6 +750,15 @@ const VIDEOS = {
     $$("button", list).forEach((b, i) => b.classList.toggle("on", i === idx));
   });
   load("sprites");
+})();
+
+// Diapositiva «Recursos ya hechos»: pestañas por tipo de recurso
+(function assetTabs() {
+  const tabs = $$("[data-asset]");
+  tabs.forEach(b => b.addEventListener("click", () => {
+    tabs.forEach(t => { const on = t === b; t.classList.toggle("active", on); t.setAttribute("aria-selected", on); });
+    $$(".asset-panel").forEach(p => p.hidden = p.id !== "asset-" + b.dataset.asset);
+  }));
 })();
 
 /* ---------------------------------------------------------

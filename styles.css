@@ -418,3 +418,24 @@ audio { width: 100%; margin-top: 10px; color-scheme: light; }
 
 /* Signo de pregunta de la niña (aparece con doble clic) */
 .rig-canvas .rig-q { left: 455px; top: 8px; width: 110px; transform: scale(0); transform-origin: 50% 90%; }
+
+/* ---------------- Tipos de archivo ---------------- */
+.ext { display: inline-grid; place-items: center; min-width: 74px; padding: 4px 8px; border-radius: 8px; font: 700 .78rem Consolas, "Cascadia Mono", monospace; color: #fff; background: var(--muted); white-space: nowrap; }
+.ext-png { background: var(--green); }
+.ext-psb { background: #2f7fb8; }
+.ext-fbx { background: var(--violet); }
+.ext-wav { background: var(--orange); }
+.ext-anim, .ext-controller { background: var(--blue); }
+.ext-cs { background: #5b4b8a; }
+.ext-pkg { background: #8a6d3b; }
+.video-files { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
+.video-files h4 { margin: 0 0 10px; font-size: 1.05rem; }
+.file-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.file-chip .ext { flex: none; width: 104px; font-size: .74rem; }
+.file-chip { display: flex; gap: 12px; align-items: flex-start; background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.file-chip > div > b { display: block; font-size: .92rem; }
+.file-chip span:not(.ext) { display: block; font-size: .82rem; color: var(--muted); line-height: 1.45; }
+.formats-table td { vertical-align: middle; }
+.formats-table .ext { min-width: 0; margin-right: 4px; }
+.asset-tabs { margin: 18px 0 14px; }
+.asset-panel > .two-col + .two-col, .asset-panel > .note + .two-col { margin-top: 18px; }

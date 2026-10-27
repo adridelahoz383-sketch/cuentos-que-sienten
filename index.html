@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=8">
+  <link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
 
@@ -397,6 +397,7 @@ animatorKid.SetTrigger("IsDoubleClicked");  // doble clic</code></pre>
           <p class="small">Toca un paso para saltar a ese momento del video.</p>
         </aside>
       </div>
+      <div class="video-files" id="videoFiles" aria-live="polite"><!-- script.js --></div>
       <p class="small">Videos explicativos hechos con los recursos reales del proyecto: la hoja de sprites del niño y el archivo por capas de la niña. Muestran el proceso y los ajustes de Unity, pero no son grabaciones de pantalla del editor.</p>
       <details class="accordion">
         <summary>Tutoriales oficiales de Unity (en inglés)</summary>
@@ -602,7 +603,190 @@ audioSource.PlayOneShot(audioSource.clip);</code></pre>
   </div>
 </section>
 
-<!-- ============ 11. Arquitectura ============ -->
+<!-- ============ 11. Recursos ya hechos (modelos y música) ============ -->
+<section class="slide" id="recursos" data-title="Recursos ya hechos" data-thumb="assets/images/kid/wave_3.png">
+  <div class="slide-inner">
+    <header class="slide-head">
+      <span class="eyebrow">Guía · Importar recursos externos</span>
+      <h2>Cómo traer a Unity modelos y música ya hechos</h2>
+      <p>Pasos para usar personajes, modelos 3D, música y paquetes creados fuera del proyecto. Es una guía: hoy el prototipo usa solo recursos 2D y no tiene ningún modelo 3D.</p>
+    </header>
+
+    <div class="table-wrap">
+      <table class="formats-table">
+        <thead><tr><th>Qué quieres traer</th><th>Formato recomendado</th><th>También sirve</th><th>Qué necesita Unity</th></tr></thead>
+        <tbody>
+          <tr><td><b>Personaje 2D animado por dibujos</b></td><td><span class="ext ext-png">.png</span> hoja de sprites</td><td>.psd, .aseprite, .jpg (sin transparencia)</td><td>Nada extra. Aseprite usa el 2D Aseprite Importer (ya instalado).</td></tr>
+          <tr><td><b>Personaje 2D con huesos</b></td><td><span class="ext ext-psb">.psb</span> por capas</td><td>.psd, o .png con las partes separadas</td><td>2D PSD Importer y 2D Animation (ya instalados). No usa .fbx.</td></tr>
+          <tr><td><b>Modelo 3D con esqueleto y animaciones</b></td><td><span class="ext ext-fbx">.fbx</span></td><td>.dae; .obj solo para objetos quietos (no guarda huesos ni animaciones); .glb con el paquete glTFast</td><td>Nada extra para .fbx. Las texturas van aparte (.png / .jpg).</td></tr>
+          <tr><td><b>Música</b></td><td><span class="ext ext-wav">.wav</span></td><td>.ogg, .mp3, .aiff</td><td>Nada extra. Un Audio Source para que suene.</td></tr>
+          <tr><td><b>Efectos de sonido</b></td><td><span class="ext ext-wav">.wav</span></td><td>.ogg, .mp3</td><td>Igual que la música, con otra configuración de carga.</td></tr>
+          <tr><td><b>Paquete con todo junto</b></td><td><span class="ext ext-pkg">.unitypackage</span></td><td>Asset Store</td><td>Revisar que sea compatible con URP antes de importarlo.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="asset-tabs seg" role="tablist" aria-label="Tipo de recurso">
+      <button class="seg-btn active" role="tab" aria-selected="true" data-asset="2d">🖼 Personajes 2D</button>
+      <button class="seg-btn" role="tab" aria-selected="false" data-asset="3d">🧊 Modelos 3D (.fbx)</button>
+      <button class="seg-btn" role="tab" aria-selected="false" data-asset="audio">🎵 Música y sonidos</button>
+      <button class="seg-btn" role="tab" aria-selected="false" data-asset="pkg">📦 Paquetes</button>
+    </div>
+
+    <!-- Personajes 2D -->
+    <div class="asset-panel" id="asset-2d" role="tabpanel">
+      <div class="two-col">
+        <div class="card">
+          <h3>Hoja de sprites (.png)</h3>
+          <ol class="numbered">
+            <li>Copiar el archivo a una carpeta propia, por ejemplo <code>Assets/Characters/NuevoPersonaje/</code>.</li>
+            <li>En el Inspector: <b>Texture Type: Sprite (2D and UI)</b>, <b>Sprite Mode: Multiple</b> y el mismo <b>Pixels Per Unit</b> que los demás personajes para que tengan tamaños parecidos. <i>Apply</i>.</li>
+            <li><b>Sprite Editor → Slice</b>: <i>Grid By Cell Count</i> si los dibujos están en una cuadrícula regular, o <i>Automatic</i> si están separados.</li>
+            <li>Seleccionar los dibujos de una acción y arrastrarlos a la escena: Unity crea el clip (.anim) y el Animator Controller.</li>
+            <li>Ajustar el clip (reposo con <i>Loop Time</i>, acciones sin él), las transiciones, el <b>Box Collider 2D</b> y el script de interacción, igual que el niño.</li>
+          </ol>
+          <p class="small">Si el dibujo se ve borroso, revisar <b>Compression</b> (None o High Quality) y <b>Max Size</b>. Para pixel art, <b>Filter Mode: Point</b>.</p>
+        </div>
+        <div class="card">
+          <h3>Personaje por capas (.psb / .psd)</h3>
+          <ol class="numbered">
+            <li>Pedir al ilustrador una capa por cada parte que se mueve (cabeza, brazo, antebrazo, mano…), sin fusionar.</li>
+            <li>Copiar el archivo al proyecto. El <b>2D PSD Importer</b> lo reconoce solo.</li>
+            <li>En el Inspector, activar <b>Use as Rig</b> y abrir <b>Sprite Editor → Skinning Editor</b> para crear huesos, geometría y pesos.</li>
+            <li>Arrastrar el archivo a la escena: aparece el personaje armado, listo para animar con keyframes.</li>
+          </ol>
+          <h4>Otros formatos 2D</h4>
+          <ul class="comp-list">
+            <li><b>.aseprite</b>: el 2D Aseprite Importer convierte cada etiqueta del archivo en un clip.</li>
+            <li><b>Spine o DragonBones</b>: necesitan el paquete del fabricante (por ejemplo spine-unity); no vienen con Unity.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modelos 3D -->
+    <div class="asset-panel" id="asset-3d" role="tabpanel" hidden>
+      <div class="note note-warn"><b>Cuándo se usa .fbx:</b> cuando el personaje ya viene hecho en un programa 3D (Blender, Maya) o de un servicio como Mixamo, con su esqueleto y sus animaciones. Para los personajes 2D de este proyecto no hace falta.</div>
+      <div class="two-col">
+        <div class="card">
+          <h3>1. Exportar bien el .fbx</h3>
+          <ul class="comp-list">
+            <li>Desde Blender: <i>File → Export → FBX</i>, con <b>Apply Scalings: FBX Units Scale</b>, <b>Forward: -Z Forward</b>, <b>Up: Y Up</b>, <b>Add Leaf Bones</b> desactivado y <b>Bake Animation</b> activado.</li>
+            <li>No conviene copiar el <code>.blend</code> directamente: Unity solo lo abre si cada computadora que abre el proyecto tiene Blender instalado.</li>
+            <li>Guardar las texturas (.png / .jpg) en una carpeta junto al .fbx.</li>
+          </ul>
+          <h3 class="mt">2. Importar</h3>
+          <p>Copiar el .fbx y sus texturas a <code>Assets/Models/NombreModelo/</code>. Al seleccionarlo, el Inspector tiene cuatro pestañas:</p>
+        </div>
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Pestaña</th><th>Qué revisar</th></tr></thead>
+              <tbody>
+                <tr><td><b>Model</b></td><td><i>Scale Factor</i> y <i>Convert Units</i>: compararlo con un cubo de 1 unidad para ver si quedó del tamaño correcto.</td></tr>
+                <tr><td><b>Rig</b></td><td><i>Animation Type</i>: <b>Humanoid</b> para personas (permite reutilizar animaciones de otros modelos), <b>Generic</b> para animales u objetos, <b>None</b> si no se anima. Con Humanoid, <i>Configure…</i> muestra si cada hueso quedó bien asignado.</td></tr>
+                <tr><td><b>Animation</b></td><td><i>Import Animation</i> activado. Si todas las acciones vienen en una sola línea de tiempo, se separan en clips por rango de fotogramas. <i>Loop Time</i> en reposo y caminar.</td></tr>
+                <tr><td><b>Materials</b></td><td><i>Extract Textures</i> y <i>Extract Materials</i> para poder editarlos. Si se ven rosados, el material es de otra pipeline: asignarle un shader de URP o usar <i>Window → Rendering → Render Pipeline Converter</i>.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <h3>3. Animarlo e interactuar</h3>
+          <ol class="numbered">
+            <li>Arrastrar el .fbx a la escena.</li>
+            <li>Crear un Animator Controller, arrastrar los clips del .fbx (aparecen dentro del archivo) y usar los mismos triggers <code>IsClicked</code> e <code>IsDoubleClicked</code>.</li>
+            <li>Añadir un <b>Box Collider 2D</b> al objeto raíz: los scripts actuales detectan el clic con colliders 2D.</li>
+            <li>Adaptar el hover: los scripts cambian el color de un <i>SpriteRenderer</i>; un modelo 3D usa un <i>Renderer</i> con material, así que habría que cambiar el color del material.</li>
+          </ol>
+        </div>
+        <div class="card">
+          <h3>A tener en cuenta en este proyecto</h3>
+          <ul class="comp-list">
+            <li>El proyecto usa <b>URP con el renderizador 2D</b>. Un modelo 3D se dibuja, pero las luces 2D no lo iluminan como a un sprite: hay que probar cómo se ve (un material <i>Unlit</i> suele ser la opción más simple) antes de decidir.</li>
+            <li>Los modelos 3D pesan más que los sprites; en la versión web aumentan el tiempo de carga.</li>
+            <li>Revisar la licencia: muchos modelos gratuitos exigen dar crédito o prohíben el uso comercial.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Música y sonidos -->
+    <div class="asset-panel" id="asset-audio" role="tabpanel" hidden>
+      <div class="two-col">
+        <div class="card">
+          <h3>1. Importar</h3>
+          <ol class="numbered">
+            <li>Usar el archivo de mejor calidad disponible (preferible <b>.wav</b>). Unity lo vuelve a comprimir al compilar, así que importar un .mp3 solo agrega una segunda pérdida.</li>
+            <li>Copiarlo a <code>Assets/Audio/Musica/</code> o <code>Assets/Audio/Efectos/</code>.</li>
+            <li>Ajustar la importación en el Inspector según el tipo de sonido (tabla de la derecha) y pulsar <i>Apply</i>.</li>
+          </ol>
+          <h3 class="mt">2. Reproducir</h3>
+          <ul class="comp-list">
+            <li><b>Música:</b> un objeto vacío «Música» (o la cámara, como hoy) con <b>Audio Source</b>: el clip, <i>Play On Awake</i> y <b>Loop</b> activados y un volumen bajo (el prototipo usa 0,195).</li>
+            <li><b>Efectos:</b> un Audio Source en el personaje y <code>PlayOneShot()</code> desde el script, como el sonido «pensar» del niño.</li>
+            <li><b>Opcional:</b> un <b>Audio Mixer</b> con grupos «Música» y «Efectos», y cada Audio Source enviado a su grupo, para controlar los volúmenes por separado.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Configuración de importación recomendada</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Opción</th><th>Música (larga)</th><th>Efecto (corto)</th></tr></thead>
+              <tbody>
+                <tr><td><b>Load Type</b></td><td>Streaming</td><td>Decompress On Load</td></tr>
+                <tr><td><b>Compression Format</b></td><td>Vorbis, calidad 60–80</td><td>ADPCM o PCM</td></tr>
+                <tr><td><b>Force To Mono</b></td><td>No</td><td>Sí, si no necesita estéreo</td></tr>
+                <tr><td><b>Load In Background</b></td><td>Sí</td><td>No</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="small">Hoy los dos audios del prototipo usan <i>Decompress On Load</i> con Vorbis al 100 %. Para la música de 24 s funciona; si se cambia por una pista completa (las del paquete 8Bit Music duran de 1,5 a 2,7 minutos), conviene pasarla a <i>Streaming</i> para no ocupar memoria.</p>
+          <div class="note note-warn"><b>Licencia y créditos:</b> confirmar que la música permite el uso previsto y anotar el crédito si lo pide.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Paquetes -->
+    <div class="asset-panel" id="asset-pkg" role="tabpanel" hidden>
+      <div class="two-col">
+        <div class="card">
+          <h3>Archivo .unitypackage</h3>
+          <ol class="numbered">
+            <li><i>Assets → Import Package → Custom Package…</i> y elegir el archivo.</li>
+            <li>Revisar la lista antes de pulsar <i>Import</i>: desmarcar <b>ProjectSettings</b> si aparece, porque reemplazaría la configuración del proyecto.</li>
+            <li>Comprobar que los archivos quedaron en su propia carpeta y no mezclados con los del proyecto.</li>
+          </ol>
+          <h3 class="mt">Desde la Asset Store</h3>
+          <ol class="numbered">
+            <li>Obtener el recurso en la Asset Store con la cuenta de Unity.</li>
+            <li><i>Window → Package Manager → My Assets</i>, buscarlo, <i>Download</i> y luego <i>Import</i>.</li>
+          </ol>
+        </div>
+        <div class="card">
+          <h3>Antes de importar, revisar</h3>
+          <ul class="comp-list">
+            <li><b>Pipeline:</b> el proyecto usa <b>URP</b>. Los paquetes hechos para la pipeline Built-in suelen verse rosados hasta convertir sus materiales.</li>
+            <li><b>Versión de Unity:</b> que el paquete sea compatible con Unity 6.</li>
+            <li><b>Licencia:</b> la de la Asset Store permite usarlo en proyectos, pero no redistribuir los archivos sueltos.</li>
+            <li><b>Copia de seguridad:</b> guardar el proyecto (o hacer un commit) antes de importar, para poder volver atrás.</li>
+          </ul>
+          <h3 class="mt">Comprobación final</h3>
+          <ul class="comp-list">
+            <li>El recurso se ve del tamaño y color correctos en la escena.</li>
+            <li>Las animaciones se reproducen y vuelven al reposo.</li>
+            <li>La música suena en bucle y los efectos no se cortan entre sí.</li>
+            <li>La compilación web sigue cargando en un tiempo razonable.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 12. Arquitectura ============ -->
 <section class="slide" id="arquitectura" data-title="Arquitectura" data-thumb="assets/images/kid/idle_1.png">
   <div class="slide-inner">
     <header class="slide-head">
@@ -616,7 +800,7 @@ audioSource.PlayOneShot(audioSource.clip);</code></pre>
   </div>
 </section>
 
-<!-- ============ 12. Conclusiones ============ -->
+<!-- ============ 13. Conclusiones ============ -->
 <section class="slide" id="conclusiones" data-title="Cierre" data-thumb="assets/images/escena_unity.png" data-fit="cover">
   <div class="slide-inner">
     <header class="slide-head">
@@ -675,6 +859,6 @@ audioSource.PlayOneShot(audioSource.clip);</code></pre>
   <button class="thumb-scroll" id="thumbsRight" aria-label="Ver miniaturas siguientes">›</button>
 </nav>
 
-<script src="script.js?v=8"></script>
+<script src="script.js?v=9"></script>
 </body>
 </html>
