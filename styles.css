@@ -165,7 +165,6 @@ pre code { background: none; color: inherit; padding: 0; }
 .accent-line { width: 36px; height: 2px; background: var(--cyan); margin-bottom: 26px; }
 .hero-text h1 { font-size: clamp(2.4rem, 4.6vw, 4.1rem); font-weight: 600; line-height: 1.06; letter-spacing: -.02em; margin-bottom: 24px; }
 .grad { background: linear-gradient(90deg, var(--green), var(--blue)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.intro { color: #4a4558; font-size: 1.05rem; max-width: 30em; }
 .tech-row { display: flex; flex-wrap: wrap; gap: 22px; list-style: none; padding: 0; margin: 26px 0 0; }
 .tech-row li { display: flex; align-items: center; gap: 8px; font-size: .85rem; color: #4a4558; }
 .tech-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--line-strong); font: 700 .85rem var(--font-head); color: var(--blue); }
@@ -184,7 +183,7 @@ pre code { background: none; color: inherit; padding: 0; }
   .hero-stage { inset: 44% 0 0 0; -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 14%); mask-image: linear-gradient(180deg, transparent 0, #000 14%); }
   .hero-text { width: auto; right: 0; bottom: 52%; padding: 18px 16px 0; justify-content: flex-start; overflow-y: auto; }
   .hero-text h1 { font-size: clamp(2rem, 7vw, 2.8rem); margin-bottom: 12px; }
-  .hero-text .intro, .tech-row, .accent-line { display: none; }
+  .tech-row, .accent-line { display: none; }
   .hero-hint { margin-top: 4px; }
   .hero-kid { left: 4%; height: 58%; } .hero-girl { left: 40%; height: 70%; }
   .float-card { display: none; }
