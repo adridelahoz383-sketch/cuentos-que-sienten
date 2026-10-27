@@ -14,7 +14,8 @@ presentacion-cuentos/
 │   ├── images/
 │   │   ├── escena_unity.png     Captura de SampleScene (pantalla previa del reproductor)
 │   │   ├── nina_completa.png    La niña compuesta desde sus capas
-│   │   ├── kid/                 16 fotogramas reales del niño (idle_0-7, question_0-7)
+│   │   ├── kid/                 24 fotogramas reales del niño (idle_0-7, question_0-7, wave_0-7)
+│   │   ├── question_mark.png    Signo de pregunta de la niña (el mismo sprite que usa Unity)
 │   │   └── partes/              15 capas reales de NewChar.psb
 │   ├── audio/
 │   │   ├── sonido_pensar_kid.wav
@@ -43,6 +44,7 @@ Las rutas de la compilación están en `script.js`, en la constante `UNITY_BUILD
 | Recurso | Origen |
 |---|---|
 | Fotogramas del niño | `Assets/Brackeys/2D Mega Pack/Characters/Hoja de sprites_ niño chibi animado.png` (recortados con los mismos rectángulos que usan los clips `AnimationKid` y `AnimationQuestion`) |
+| Fotogramas «saludar» del niño | `Assets/Brackeys/2D Mega Pack/Characters/Sprite de niño saludando.png` (rectángulos del clip `Saludar`, escalados al tamaño de los demás fotogramas) |
 | Capas de la niña | `Assets/Characters/NewChar/NewChar.psb` |
 | Captura de escena | Game View de `Assets/Scenes/SampleScene.unity` |
 | Audios | `Assets/8Bit Music - 062022/` |
@@ -137,4 +139,4 @@ unityInstance.SendMessage("WebBridge", "PlayKidAction", "IsClicked");
 - [ ] Adaptar la entrada a pantallas táctiles antes de presentarlo en tabletas.
 - [ ] Sustituir las ilustraciones, animaciones y audios de prueba por los definitivos del cliente.
 - [ ] Actualizar la lista de temas a tratar (`TOPICS` en `script.js`) cuando se resuelva cada punto.
-- [ ] Al modificar `styles.css` o `script.js`, subir el número de versión (`?v=7`) en `index.html` para que los navegadores no muestren la copia vieja guardada en caché.
+- [ ] Al modificar `styles.css` o `script.js`, subir el número de versión (`?v=8`) en `index.html` para que los navegadores no muestren la copia vieja guardada en caché.

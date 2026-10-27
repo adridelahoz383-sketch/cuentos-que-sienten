@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=7">
+  <link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
 
@@ -53,7 +53,7 @@
       <li><span class="tech-ico">🦴</span><span>2D Animation</span></li>
       <li><span class="tech-ico">👆</span><span>Input System</span></li>
     </ul>
-    <p class="hero-hint">Toca a los personajes: reaccionan igual que en el prototipo.</p>
+    <p class="hero-hint">Toca a los personajes: un clic para que saluden, doble clic para que pregunten, igual que en el prototipo.</p>
   </div>
 
   <aside class="float-card">
@@ -119,9 +119,11 @@
         <ol class="try-list">
           <li><b>Observa la escena.</b> El fondo está quieto; el niño y la niña respiran y se mueven levemente (animación de reposo).</li>
           <li><b>Pasa el cursor sobre el niño.</b> Se aclara para indicar que se puede tocar.</li>
-          <li><b>Haz clic sobre el niño.</b> Pone su gesto de pensar, suena el efecto «pensar» y vuelve solo al reposo.</li>
+          <li><b>Haz clic sobre el niño.</b> Saluda con la mano, suena el efecto «pensar» y vuelve solo al reposo. Responde medio segundo después, porque espera por si llega un segundo clic.</li>
+          <li><b>Haz doble clic sobre el niño.</b> Se lleva la mano a la barbilla y aparece un signo de pregunta. Esta acción no tiene sonido.</li>
           <li><b>Pasa el cursor sobre la niña.</b> Todas sus partes toman un tono cálido.</li>
           <li><b>Haz clic sobre la niña.</b> Salta y saluda con el brazo (animación por huesos) y vuelve al reposo. Esta acción todavía no tiene sonido.</li>
+          <li><b>Haz doble clic sobre la niña.</b> Lleva la mano hacia la barbilla, ladea la cabeza y aparece un signo de pregunta.</li>
           <li><b>Música de fondo.</b> Empieza con el primer clic dentro del juego (los navegadores bloquean el audio hasta que el usuario interactúa) y dura 24 s, porque en esta versión no está en bucle.</li>
         </ol>
         <div class="note note-warn">
@@ -162,7 +164,7 @@
       <span class="flow-node state">AnimationKid</span><span class="arrow">→</span>
       <span class="flow-node event">Clic detectado</span><span class="arrow">→</span>
       <span class="flow-node param">IsClicked</span><span class="arrow">→</span>
-      <span class="flow-node state">AnimationQuestion</span><span class="arrow">→</span>
+      <span class="flow-node state">Saludar</span><span class="arrow">→</span>
       <span class="flow-node state">AnimationKid</span>
     </div>
 
@@ -177,7 +179,7 @@
     <div class="two-col compare">
       <div class="card">
         <h3><span class="chip chip-param">Trigger</span> Pide que algo ocurra una vez</h3>
-        <p>Funciona como un timbre: se activa, el Animator lo usa para cambiar de estado y se apaga solo. Es el tipo que usa el prototipo con <code>IsClicked</code>.</p>
+        <p>Funciona como un timbre: se activa, el Animator lo usa para cambiar de estado y se apaga solo. Es el tipo que usa el prototipo con <code>IsClicked</code> (un clic) e <code>IsDoubleClicked</code> (doble clic).</p>
         <pre><code>animator.SetTrigger("IsClicked");</code></pre>
       </div>
       <div class="card">
@@ -232,9 +234,25 @@ bool over = collider.OverlapPoint(mousePosition);
 
 if (over &amp;&amp; Mouse.current.leftButton.wasPressedThisFrame)
 {
-    animatorKid.SetTrigger("IsClicked");
-    audioSource.PlayOneShot(audioSource.clip);
+    clickCount++;                                  // cuenta los clics seguidos
+    if (clickCount == 1) firstClickTime = Time.time;
+}
+
+// Pasado el tiempo de doble clic (0,5 s) se decide la acción
+if (clickCount &gt; 0 &amp;&amp; Time.time - firstClickTime &gt; doubleClcikTime)
+{
+    if (clickCount == 1)
+    {
+        animatorKid.SetTrigger("IsClicked");        // saludar
+        audioSource.PlayOneShot(audioSource.clip);
+    }
+    else
+    {
+        animatorKid.SetTrigger("IsDoubleClicked");  // pregunta
+    }
+    clickCount = 0;
 }</code></pre>
+        <p class="small">La niña usa la misma lógica en <code>IsClickedRig.cs</code>, con <code>IsClicked</code> para saludar e <code>IsDoubleClicked</code> para preguntar.</p>
         <p class="note note-info">Para tabletas y celulares hay que adaptar la entrada a pantallas táctiles (ver <a href="#entrada">Cómo se haría con un sistema de clic distinto al ratón</a>).</p>
       </article>
 
@@ -249,7 +267,8 @@ animatorKid = GetComponent&lt;Animator&gt;();</code></pre>
       <article class="step-card">
         <span class="step-num">4</span>
         <h3>Activar la animación</h3>
-        <pre><code>animatorKid.SetTrigger("IsClicked");</code></pre>
+        <pre><code>animatorKid.SetTrigger("IsClicked");        // un clic
+animatorKid.SetTrigger("IsDoubleClicked");  // doble clic</code></pre>
         <p>El texto <code>"IsClicked"</code> debe coincidir <b>exactamente</b> con el parámetro del Animator Controller, incluidas mayúsculas. Si no coincide, Unity muestra un aviso en la consola y no pasa nada.</p>
       </article>
 
@@ -258,8 +277,8 @@ animatorKid = GetComponent&lt;Animator&gt;();</code></pre>
         <h3>Configurar las transiciones</h3>
         <div class="state-diagram" aria-label="Diagrama de estados">
           <span class="flow-node state">Idle</span><span class="arrow">→</span>
-          <span class="flow-node event">Interacción</span><span class="arrow">→</span>
-          <span class="flow-node state">Question</span><span class="arrow">→</span>
+          <span class="flow-node event">Clic / doble clic</span><span class="arrow">→</span>
+          <span class="flow-node state">Saludar / Question</span><span class="arrow">→</span>
           <span class="flow-node event">Fin de animación</span><span class="arrow">→</span>
           <span class="flow-node state">Idle</span>
         </div>
@@ -267,15 +286,17 @@ animatorKid = GetComponent&lt;Animator&gt;();</code></pre>
           <table>
             <thead><tr><th>Transición</th><th>Condición</th><th>Has Exit Time</th><th>Por qué</th></tr></thead>
             <tbody>
-              <tr><td><b>Idle</b> (AnimationKid) → <b>Question</b> (AnimationQuestion)</td><td><code>IsClicked</code></td><td>Desactivado</td><td>Debe responder en cuanto se hace clic, sin esperar a que termine el reposo.</td></tr>
-              <tr><td><b>Question</b> → <b>Idle</b></td><td>Ninguna</td><td>Activado (1)</td><td>Vuelve al reposo cuando la animación de pensar termina.</td></tr>
+              <tr><td><b>Idle</b> (AnimationKid) → <b>Saludar</b></td><td><code>IsClicked</code></td><td>Desactivado</td><td>Debe responder en cuanto llega el aviso, sin esperar a que termine el reposo.</td></tr>
+              <tr><td><b>Idle</b> → <b>Question</b> (AnimationQuestion)</td><td><code>IsDoubleClicked</code></td><td>Desactivado</td><td>Igual que la anterior, para el doble clic.</td></tr>
+              <tr><td><b>Saludar</b> ↔ <b>Question</b></td><td><code>IsDoubleClicked</code> / <code>IsClicked</code></td><td>Activado</td><td>Si llega la otra acción, cambia cuando la actual casi termina.</td></tr>
+              <tr><td><b>Saludar</b> → <b>Idle</b> y <b>Question</b> → <b>Idle</b></td><td>Ninguna</td><td>Activado</td><td>Vuelve al reposo cuando la acción termina.</td></tr>
             </tbody>
           </table>
         </div>
         <ul class="comp-list">
           <li><b>Estado inicial:</b> <code>Idle</code> está marcado como estado por defecto (en naranja en el Animator). Se marca con clic derecho → <i>Set as Layer Default State</i>.</li>
           <li><b>Has Exit Time</b> obliga a esperar a que la animación llegue a cierto punto antes de cambiar. Úsalo para «terminar y volver»; desactívalo para «reaccionar ya».</li>
-          <li><b>Clips:</b> <code>AnimationKid</code> está en bucle (Loop Time activado) y <code>AnimationQuestion</code> se reproduce una sola vez. Ambos tienen 8 fotogramas a 7 fotogramas por segundo (unos 1,14 s).</li>
+          <li><b>Clips:</b> <code>AnimationKid</code> está en bucle (Loop Time activado); <code>Saludar</code> y <code>AnimationQuestion</code> se reproducen una sola vez. Los tres tienen 8 fotogramas a 7 fotogramas por segundo (unos 1,14 s).</li>
         </ul>
 
         <details class="accordion">
@@ -320,7 +341,7 @@ animatorKid = GetComponent&lt;Animator&gt;();</code></pre>
         <div><span class="small">Toques seguidos</span><b id="inputCount">0</b></div>
         <div><span class="small">Acción que se activaría</span><b id="inputAction">—</b></div>
       </div>
-      <p class="small">El navegador, como el <code>Pointer</code> de Unity, trata igual al ratón, al dedo y al lápiz, y además informa cuál se usó. Un toque reproduce la animación real de pensar. Dos toques en menos de 0,3 s cuentan como doble toque; como el niño todavía no tiene una segunda animación, la demo repite la de pensar con un salto para que se note la diferencia.</p>
+      <p class="small">El navegador, como el <code>Pointer</code> de Unity, trata igual al ratón, al dedo y al lápiz, y además informa cuál se usó. Funciona como <code>IsCliked.cs</code>: espera 0,5 s; un toque reproduce la animación real de saludar y dos toques, la de pensar. En el prototipo de Unity esto todavía solo funciona con el ratón.</p>
     </div>
 
     <div class="note note-info input-today">
@@ -411,6 +432,7 @@ animatorKid = GetComponent&lt;Animator&gt;();</code></pre>
             <div class="frame-strip" id="frameStrip"></div>
             <div class="demo-actions">
               <button class="btn btn-small" data-sprite="idle">Reposo</button>
+              <button class="btn btn-small btn-action-soft" data-sprite="wave">Saludar</button>
               <button class="btn btn-small btn-action-soft" data-sprite="question">Pensar</button>
             </div>
             <p><b>Animación por sprites:</b> cambia entre dibujos completos, como un folioscopio. Cada pose nueva necesita un dibujo nuevo.</p>
@@ -421,8 +443,9 @@ animatorKid = GetComponent&lt;Animator&gt;();</code></pre>
             <div class="demo-actions">
               <button class="btn btn-small" id="rigBones" aria-pressed="false">Mostrar huesos</button>
               <button class="btn btn-small btn-action-soft" id="rigWave">Saludar</button>
+              <button class="btn btn-small btn-action-soft" id="rigQuestion">Preguntar</button>
             </div>
-            <p><b>Animación por huesos:</b> mueve y rota partes articuladas del mismo dibujo. Una sola ilustración sirve para muchos movimientos.</p>
+            <p><b>Animación por huesos:</b> mueve y rota partes articuladas del mismo dibujo. Una sola ilustración sirve para muchos movimientos. También puedes hacer clic (saludar) o doble clic (preguntar) sobre ella.</p>
           </div>
         </div>
         <p class="small">Las dos técnicas se pueden combinar, por ejemplo huesos para el cuerpo y sprites para cambiar la boca o los ojos. Estas demostraciones imitan la idea en la web; la versión real está en el <a href="#prototipo">prototipo</a>.</p>
@@ -488,8 +511,9 @@ animatorKid = GetComponent&lt;Animator&gt;();</code></pre>
         <ul class="comp-list">
           <li><b>NewChar_Idle</b> (2 s, en bucle): el pecho se expande un 3,5 % (respiración), la cabeza se inclina 1,5° y los brazos se balancean 2,5°.</li>
           <li><b>NewChar_Clicked</b> (1,3 s, una vez): se agacha, salta, saluda con el brazo derecho moviendo el antebrazo y aterriza.</li>
+          <li><b>NewChar_Question</b> (1,6 s, una vez, con doble clic): lleva la mano derecha hacia la barbilla, ladea la cabeza, da dos toquecitos y muestra un signo de pregunta.</li>
         </ul>
-        <p class="small">Solo se animan los huesos: no cambian las imágenes ni el color.</p>
+        <p class="small">Se animan los huesos; la única imagen extra es el signo de pregunta, que aparece y desaparece cambiando su tamaño.</p>
       </article>
     </div>
   </div>
@@ -603,7 +627,7 @@ audioSource.PlayOneShot(audioSource.clip);</code></pre>
       <div class="card"><h3>🎯 Qué demuestra el prototipo</h3><p>Una escena ilustrada con personajes vivos que reaccionan al usuario con animación y sonido, y que se puede ejecutar en el navegador.</p></div>
       <div class="card"><h3>✅ Sistemas validados</h3><p>Animación de reposo, detección de clic sobre el personaje, cambio de animación con Trigger, regreso al reposo, hover, efecto de sonido y animación por huesos.</p></div>
       <div class="card"><h3>📦 Recursos por integrar o revisar</h3><p>Ilustraciones definitivas, animaciones del animador, audios finales del ingeniero de sonido y música en bucle.</p></div>
-      <div class="card"><h3>🛠 Funciones pendientes</h3><p>Toque en pantallas táctiles, doble toque, objetos interactivos, sincronización fina de audio, más escenas y transiciones.</p></div>
+      <div class="card"><h3>🛠 Funciones pendientes</h3><p>Toque y doble toque en pantallas táctiles (con ratón ya funcionan), objetos interactivos, sincronización fina de audio, más escenas y transiciones.</p></div>
       <div class="card highlight"><h3>🤝 Decisiones a acordar</h3>
         <ul class="comp-list">
           <li>Dispositivo final: tableta, celular, PC o pantalla táctil.</li>
@@ -651,6 +675,6 @@ audioSource.PlayOneShot(audioSource.clip);</code></pre>
   <button class="thumb-scroll" id="thumbsRight" aria-label="Ver miniaturas siguientes">›</button>
 </nav>
 
-<script src="script.js?v=7"></script>
+<script src="script.js?v=8"></script>
 </body>
 </html>

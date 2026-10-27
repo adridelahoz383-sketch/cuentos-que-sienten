@@ -123,12 +123,13 @@ $("#fullscreenDeck").addEventListener("click", () => {
 const KID_FRAMES = {
   idle: Array.from({ length: 8 }, (_, i) => `assets/images/kid/idle_${i}.png`),
   question: Array.from({ length: 8 }, (_, i) => `assets/images/kid/question_${i}.png`),
+  wave: Array.from({ length: 8 }, (_, i) => `assets/images/kid/wave_${i}.png`),
 };
 const KID_FPS = 7;
 Object.values(KID_FRAMES).flat().forEach(src => { const im = new Image(); im.src = src; });
 
 const kidPlayers = [];
-// Reposo en bucle; «pensar» se reproduce una vez y vuelve solo al reposo (como Has Exit Time)
+// Reposo en bucle; «saludar» y «pensar» se reproducen una vez y vuelven solos al reposo (como Has Exit Time)
 function kidPlayer(img, onFrame) {
   const p = {
     clip: "idle", frame: 0,
@@ -149,12 +150,24 @@ setInterval(() => kidPlayers.forEach(p => {
 }), 1000 / KID_FPS);
 const kid = (img, onFrame) => Object.assign(kidPlayer(img, onFrame), { img });
 
-// Portada: el niño reacciona al tocarlo, y la tarjeta flotante lo muestra en reposo
+// Clic simple o doble, con la misma lógica que IsCliked.cs: se cuentan los clics y,
+// cuando pasa el tiempo de doble clic (0,5 s), 1 clic = IsClicked y 2 o más = IsDoubleClicked.
+const DOUBLE_CLICK_TIME = 500;
+function clickCounter(onSingle, onDouble) {
+  let count = 0, timer = 0;
+  return () => {
+    count++;
+    if (count === 1) timer = setTimeout(() => { (count === 1 ? onSingle : onDouble)(); count = 0; }, DOUBLE_CLICK_TIME);
+    return count;
+  };
+}
+
+// Portada: un clic = saludar, doble clic = pensar. La tarjeta flotante lo muestra en reposo
 const heroKid = kid($("#heroKid"));
-$("#heroKidBtn").addEventListener("click", () => heroKid.play("question"));
+$("#heroKidBtn").addEventListener("click", clickCounter(() => heroKid.play("wave"), () => heroKid.play("question")));
 kid($("#cardKid"));
 
-// Demostración de sprites: reposo en bucle, «pensar» una vez y vuelta al reposo
+// Demostración de sprites: reposo en bucle, «saludar» o «pensar» una vez y vuelta al reposo
 const strip = $("#frameStrip");
 const spriteDemo = kid($("#spriteDemo"), p => {
   strip.innerHTML = KID_FRAMES[p.clip].map((src, i) => `<img src="${src}" alt="Fotograma ${i + 1}" class="${i === p.frame ? "on" : ""}">`).join("");
@@ -315,24 +328,25 @@ if (p != null && p.press.wasPressedThisFrame)
   },
   {
     g: "interaccion", t: "Diferenciar un toque de un doble toque",
-    now: "<code>IsCliked.cs</code> ya declara <code>doubleClickTime</code>, <code>lastClickTime</code> y <code>clickCount</code>, pero no los usa: hoy solo hay una acción por personaje.",
+    now: "Con <b>ratón</b> ya funciona: <code>IsCliked.cs</code> (niño) e <code>IsClickedRig.cs</code> (niña) cuentan los clics y esperan 0,5 s. Un clic activa <code>IsClicked</code> (saludar) y dos activan <code>IsDoubleClicked</code> (pregunta). Falta que funcione con el dedo, y el clic simple tarda 0,5 s en responder porque espera un posible segundo clic.",
     steps: [
-      "En el Animator, crear un parámetro Trigger <code>DoubleTap</code> y un estado nuevo con la segunda animación (Loop Time desactivado).",
-      "Crear las transiciones Idle → DoubleTap y Clicked → DoubleTap con la condición <code>DoubleTap</code> y sin Exit Time, para que el segundo toque interrumpa al primero. Agregar DoubleTap → Idle con Exit Time 1.",
-      "En el script, guardar la hora del último toque. Si el siguiente llega antes de ~0,3 s, activar <code>DoubleTap</code>; si no, activar <code>IsClicked</code>.",
-      "Definir con el cliente si el primer toque responde al instante (más ágil) o si espera 0,3 s por si llega otro toque (sin interrupciones).",
+      "Hecho: parámetro Trigger <code>IsDoubleClicked</code> y estado <b>Question</b> en los dos Animator, con vuelta a Idle por Exit Time.",
+      "Hecho: los scripts cuentan los clics sobre el personaje y deciden la acción cuando pasa <code>doubleClickTime</code>.",
+      "Pendiente: cambiar <code>Mouse.current</code> por <code>Pointer.current</code> para que el doble toque también funcione en pantallas táctiles (ver el tema anterior).",
+      "Pendiente: definir con el cliente si el primer toque responde al instante (más ágil) o si espera 0,5 s por si llega otro toque, como ahora (sin interrupciones).",
     ],
-    code: `if (Time.unscaledTime - ultimoToque <= tiempoDobleToque)
+    code: `if (over && Mouse.current.leftButton.wasPressedThisFrame)
 {
-    animator.SetTrigger("DoubleTap");   // segunda animación
-    ultimoToque = -1f;
+    clickCount++;
+    if (clickCount == 1) firstClickTime = Time.time;
 }
-else
+if (clickCount > 0 && Time.time - firstClickTime > doubleClickTime)
 {
-    animator.SetTrigger("IsClicked");   // primera animación
-    ultimoToque = Time.unscaledTime;
+    if (clickCount == 1) animator.SetTrigger("IsClicked");        // saludar
+    else                 animator.SetTrigger("IsDoubleClicked");  // pregunta
+    clickCount = 0;
 }`,
-    test: "Un toque → animación 1. Dos toques rápidos → animación 2. Dos toques lentos → dos veces la animación 1.",
+    test: "Un clic → saluda (tras 0,5 s). Dos clics rápidos → pregunta. Dos clics lentos → saluda dos veces.",
   },
   {
     g: "interaccion", t: "Interacciones con objetos del entorno",
@@ -638,21 +652,16 @@ renderMethod();
   const pad = $("#inputPad"), layer = $("#rippleLayer");
   const NAMES = { mouse: "🖱 Ratón", touch: "👆 Dedo", pen: "✏️ Lápiz" };
   const inputKid = kid($("#inputKid"));
-  let count = 0, last = 0;
-  // Un toque: animación real de pensar. Doble toque: se repite con un salto (el niño aún no tiene segunda animación)
-  function react(n) {
-    inputKid.play("question");
-    pad.classList.remove("jump");
-    if (n >= 2) { void pad.offsetWidth; pad.classList.add("jump"); }
-  }
+  // Igual que IsCliked.cs: se espera el tiempo de doble clic y luego se decide la animación
+  const SINGLE = "IsClicked → Saludar", DOUBLE = "IsDoubleClicked → Pensar";
+  const single = () => { inputKid.play("wave"); $("#inputAction").textContent = SINGLE; };
+  const double = () => { inputKid.play("question"); $("#inputAction").textContent = DOUBLE; };
+  const counter = clickCounter(single, double);
   pad.addEventListener("pointerdown", e => {
-    const now = performance.now();
-    count = now - last <= 300 ? count + 1 : 1;
-    last = now;
-    react(count);
+    const count = counter();
     $("#inputType").textContent = NAMES[e.pointerType] || e.pointerType || "Desconocido";
     $("#inputCount").textContent = count;
-    $("#inputAction").textContent = count >= 2 ? "DoubleTap (segunda animación)" : "IsClicked (primera animación)";
+    $("#inputAction").textContent = "Esperando 0,5 s por un segundo toque…";
     // Onda visual en el punto tocado
     const r = pad.getBoundingClientRect();
     const dot = document.createElement("span");
@@ -665,10 +674,9 @@ renderMethod();
   pad.addEventListener("keydown", e => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      react(1);
+      single();
       $("#inputType").textContent = "⌨️ Teclado";
       $("#inputCount").textContent = 1;
-      $("#inputAction").textContent = "IsClicked (primera animación)";
     }
   });
 })();
@@ -730,19 +738,19 @@ const FLOW = [
   { t: "El usuario interactúa", b: "El niño hace clic sobre el personaje. En el prototipo el personaje está en <b>AnimationKid</b>, su animación de reposo en bucle." },
   { t: "El sistema detecta la entrada", b: "En cada fotograma, el script pregunta al <b>Input System</b> si el botón izquierdo del ratón se presionó en ese instante (<code>wasPressedThisFrame</code>)." },
   { t: "¿La acción es para este personaje?", b: "La posición del ratón se convierte a coordenadas de la escena y se comprueba si cae dentro del <b>Collider 2D</b> del personaje (<code>OverlapPoint</code>). Si el clic fue en otro lugar, no ocurre nada." },
-  { t: "Se activa el parámetro", b: "El script llama a <code>SetTrigger(\"IsClicked\")</code>. Es como tocar un timbre: el Animator recibe el aviso. En el mismo momento se reproduce el sonido «pensar»." },
-  { t: "El Animator cambia de estado", b: "La transición <b>Idle → Question</b> tiene la condición <code>IsClicked</code> y no espera a que termine el reposo (Has Exit Time desactivado), así que cambia de inmediato." },
-  { t: "Se reproduce la animación", b: "Suena <b>AnimationQuestion</b>: 8 dibujos a 7 por segundo en los que el niño se lleva la mano a la barbilla y aparece un signo de pregunta." },
-  { t: "Regreso al reposo", b: "La transición <b>Question → Idle</b> usa Has Exit Time = 1: cuando la animación termina, el personaje vuelve solo a <b>AnimationKid</b> y queda listo para otro clic." },
+  { t: "Se activa el parámetro", b: "El script llama a <code>SetTrigger(\"IsClicked\")</code>. Es como tocar un timbre: el Animator recibe el aviso. En el mismo momento se reproduce el sonido «pensar». Antes, el script espera 0,5 s: si llega un segundo clic, en lugar de <code>IsClicked</code> activa <code>IsDoubleClicked</code>." },
+  { t: "El Animator cambia de estado", b: "La transición <b>Idle → Saludar</b> tiene la condición <code>IsClicked</code> y no espera a que termine el reposo (Has Exit Time desactivado), así que cambia de inmediato." },
+  { t: "Se reproduce la animación", b: "Se reproduce <b>Saludar</b>: 8 dibujos a 7 por segundo en los que el niño levanta la mano y saluda. Con doble clic se reproduce <b>AnimationQuestion</b>: se lleva la mano a la barbilla y aparece un signo de pregunta." },
+  { t: "Regreso al reposo", b: "Las transiciones <b>Saludar → Idle</b> y <b>Question → Idle</b> usan Has Exit Time: cuando la animación termina, el personaje vuelve solo a <b>AnimationKid</b> y queda listo para otro clic." },
 ];
 let flowIdx = 0;
 const flowList = $("#flowSteps");
 const flowPanel = $("#flowPanel");
-// El niño acompaña cada paso: reposo, destello al detectar el clic, pensar y regreso al reposo
+// El niño acompaña cada paso: reposo, destello al detectar el clic, saludar y regreso al reposo
 const flowKid = kid($("#flowKid"));
 function flowPose() {
   $(".flow-visual").classList.toggle("flash", flowIdx === 1 || flowIdx === 2);
-  flowKid.play(flowIdx >= 3 && flowIdx <= 5 ? "question" : "idle");
+  flowKid.play(flowIdx >= 3 && flowIdx <= 5 ? "wave" : "idle");
 }
 flowList.innerHTML = FLOW.map((f, i) => `<li><button role="tab" id="flow-tab-${i}" aria-controls="flowPanel" aria-selected="false" data-i="${i}"><span class="n">${i + 1}</span>${f.t}</button></li>`).join("");
 function renderFlow() {
@@ -902,6 +910,7 @@ function buildRig(host) {
       ${g("body", 300, HIP_Y, img("torso") + bone(300, HIP_Y, 300, 480) + bone(300, 480, 300, 395))}
       ${g("up", 300, SHOULDER_Y, arm("L") + arm("R") + g("head", 300, 392, img("head") + img("hair_front") + bone(300, 392, 300, 150)))}
     `)}
+    <img class="rig-q" src="assets/images/question_mark.png" alt="" draggable="false">
   </div>`;
   const canvas = $(".rig-canvas", host);
   const all = j => $$(`[data-j="${j}"]`, canvas);
@@ -953,16 +962,45 @@ function buildRig(host) {
     anim("leg_R", [{ transform: "rotate(0)" }, { transform: "rotate(-6deg)", offset: 0.32 }, { transform: "rotate(0)", offset: 0.55 }, { transform: "rotate(0)" }], o);
     done[0].finished.then(() => { busy = false; });
   }
-  return { wave, fit };
+
+  // Pregunta (como NewChar_Question, 1,6 s): lleva la mano derecha hacia la barbilla, ladea la cabeza,
+  // da dos toquecitos «pensando» y aparece un signo de pregunta, igual que en el niño.
+  function question() {
+    if (busy) return;
+    busy = true;
+    const o = { duration: 1600, easing: "ease-in-out", composite: "replace" };
+    const done = anim("arm_upper_R", [{ transform: "rotate(0)" }, { transform: "rotate(9.5deg)", offset: 0.19 },
+      { transform: "rotate(9.5deg)", offset: 0.78 }, { transform: "rotate(0)" }], o);
+    anim("arm_lower_R", [{ transform: "rotate(0)" }, { transform: "rotate(117deg)", offset: 0.19 },
+      { transform: "rotate(109deg)", offset: 0.34 }, { transform: "rotate(117deg)", offset: 0.5 }, { transform: "rotate(109deg)", offset: 0.66 },
+      { transform: "rotate(117deg)", offset: 0.78 }, { transform: "rotate(0)" }], o);
+    anim("hand_R", [{ transform: "rotate(0)" }, { transform: "rotate(10.5deg)", offset: 0.19 }, { transform: "rotate(10.5deg)", offset: 0.78 }, { transform: "rotate(0)" }], o);
+    anim("arm_upper_L", [{ transform: "rotate(0)" }, { transform: "rotate(2deg)", offset: 0.5 }, { transform: "rotate(0)" }], o);
+    anim("head", [{ transform: "rotate(0)" }, { transform: "rotate(5deg)", offset: 0.19 }, { transform: "rotate(2deg)", offset: 0.44 },
+      { transform: "rotate(5deg)", offset: 0.62 }, { transform: "rotate(5deg)", offset: 0.78 }, { transform: "rotate(0)" }], o);
+    anim("body", [{ transform: "scaleY(1)" }, { transform: "scaleY(1.02)", offset: 0.19 }, { transform: "scaleY(1)", offset: 0.44 },
+      { transform: "scaleY(1.02)", offset: 0.62 }, { transform: "scaleY(1)" }], o);
+    anim("up", [{ transform: lift(1) }, { transform: lift(1.02), offset: 0.19 }, { transform: lift(1), offset: 0.44 },
+      { transform: lift(1.02), offset: 0.62 }, { transform: lift(1) }], o);
+    $(".rig-q", canvas).animate([
+      { transform: "scale(0) rotate(0)", offset: 0 }, { transform: "scale(0) rotate(0)", offset: 0.125 },
+      { transform: "scale(1.15) rotate(-5deg)", offset: 0.22 }, { transform: "scale(1) rotate(-10deg)", offset: 0.28 },
+      { transform: "translateY(-14px) rotate(8deg)", offset: 0.5 }, { transform: "scale(1) rotate(-6deg)", offset: 0.75 },
+      { transform: "scale(0) rotate(0)", offset: 0.875 }, { transform: "scale(0) rotate(0)", offset: 1 }], { duration: 1600, easing: "ease-out" });
+    done[0].finished.then(() => { busy = false; });
+  }
+  return { wave, question, fit };
 }
 
-// Portada: la niña saluda al tocarla
+// Portada: la niña saluda con un clic y pregunta con doble clic (como IsClickedRig.cs)
 const heroRig = buildRig($("#heroRig"));
-$("#heroGirlBtn").addEventListener("click", heroRig.wave);
+$("#heroGirlBtn").addEventListener("click", clickCounter(heroRig.wave, heroRig.question));
 
-// Diapositiva de huesos: mostrar el esqueleto y saludar
+// Diapositiva de huesos: mostrar el esqueleto, saludar o preguntar (botones, o clic / doble clic sobre ella)
 const demoRig = buildRig($("#rigHost"));
 $("#rigWave").addEventListener("click", demoRig.wave);
+$("#rigQuestion").addEventListener("click", demoRig.question);
+$("#rigStage").addEventListener("click", clickCounter(demoRig.wave, demoRig.question));
 const bonesBtn = $("#rigBones");
 bonesBtn.addEventListener("click", () => {
   const on = $("#rigStage").classList.toggle("show-bones");
