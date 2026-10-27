@@ -25,81 +25,142 @@ const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 /* ---------------------------------------------------------
-   2. Navegación: progreso, sección activa, anterior/siguiente
+   2. Diapositivas: una sección visible a la vez, con pestañas
+   numeradas arriba, flechas, miniaturas, teclado y gestos
    --------------------------------------------------------- */
-const sections = $$("[data-section]");
-const navLinks = $$("#navLinks a");
+const slides = $$(".slide");
+const pad2 = n => String(n).padStart(2, "0");
+let current = -1;
 
-function updateProgress() {
-  const max = document.documentElement.scrollHeight - innerHeight;
-  $("#progressFill").style.width = (max > 0 ? (scrollY / max) * 100 : 0) + "%";
-}
-addEventListener("scroll", updateProgress, { passive: true });
-updateProgress();
+$("#topNav").innerHTML = slides.map((s, i) =>
+  `<li><a href="#${s.id}" data-i="${i}">${pad2(i + 1)}. ${s.dataset.title}</a></li>`).join("");
+$("#thumbs").innerHTML = slides.map((s, i) =>
+  `<li><a href="#${s.id}" data-i="${i}" aria-label="Diapositiva ${i + 1}: ${s.dataset.title}">
+    <img class="${s.dataset.fit || "contain"}" src="${s.dataset.thumb}" alt="" loading="lazy" draggable="false">
+    <span>${pad2(i + 1)}. ${s.dataset.title}</span></a></li>`).join("");
+const topLinks = $$("#topNav a"), thumbLinks = $$("#thumbs a");
 
-function currentSectionIndex() {
-  const y = scrollY + innerHeight * 0.35;
-  let idx = 0;
-  sections.forEach((s, i) => { if (s.offsetTop <= y) idx = i; });
-  return idx;
+function showSlide(i, { updateHash = true } = {}) {
+  i = Math.max(0, Math.min(slides.length - 1, i));
+  if (i === current) return;
+  const prev = slides[current];
+  current = i;
+  slides.forEach((s, j) => {
+    s.classList.toggle("active", j === i);
+    s.classList.toggle("before", j < i);
+    s.setAttribute("aria-hidden", j !== i);
+    s.inert = j !== i;
+  });
+  // Al salir de una diapositiva se pausan sus videos y audios
+  if (prev) $$("video, audio", prev).forEach(m => m.pause());
+  [topLinks, thumbLinks].forEach(list => list.forEach((a, j) => {
+    a.classList.toggle("active", j === i);
+    if (j === i) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
+  }));
+  thumbLinks[i].scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  topLinks[i].scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  $("#slideCounter").textContent = `${pad2(i + 1)} / ${pad2(slides.length)}`;
+  $("#progressFill").style.width = ((i + 1) / slides.length) * 100 + "%";
+  $("#prevSlide").disabled = i === 0;
+  $("#nextSlide").disabled = i === slides.length - 1;
+  const inner = $(".slide-inner", slides[i]);
+  if (inner) inner.scrollTop = 0;
+  if (updateHash && location.hash !== "#" + slides[i].id) history.replaceState(null, "", "#" + slides[i].id);
+  document.dispatchEvent(new CustomEvent("slidechange", { detail: slides[i].id }));
 }
-function markActive() {
-  const id = sections[currentSectionIndex()].id;
-  navLinks.forEach(a => a.classList.toggle("active", a.getAttribute("href") === "#" + id));
-}
-addEventListener("scroll", markActive, { passive: true });
-markActive();
+const indexOfId = id => slides.findIndex(s => s.id === id);
 
-function goTo(i) {
-  const target = sections[Math.max(0, Math.min(sections.length - 1, i))];
-  target.scrollIntoView({ behavior: "smooth" });
-}
-$("#prevSection").addEventListener("click", () => goTo(currentSectionIndex() - 1));
-$("#nextSection").addEventListener("click", () => goTo(currentSectionIndex() + 1));
-$("#homeSection").addEventListener("click", () => goTo(0));
-
-const menuToggle = $("#menuToggle");
-menuToggle.addEventListener("click", () => {
-  const open = $("#navLinks").classList.toggle("open");
-  menuToggle.setAttribute("aria-expanded", open);
+// Cualquier enlace interno (#prototipo, #temas…) cambia de diapositiva
+document.addEventListener("click", e => {
+  const a = e.target.closest('a[href^="#"]');
+  if (!a) return;
+  const i = indexOfId(a.getAttribute("href").slice(1));
+  if (i >= 0) { e.preventDefault(); showSlide(i); }
 });
-navLinks.forEach(a => a.addEventListener("click", () => {
-  $("#navLinks").classList.remove("open");
-  menuToggle.setAttribute("aria-expanded", "false");
-}));
+addEventListener("hashchange", () => { const i = indexOfId(location.hash.slice(1)); if (i >= 0) showSlide(i, { updateHash: false }); });
+$("#prevSlide").addEventListener("click", () => showSlide(current - 1));
+$("#nextSlide").addEventListener("click", () => showSlide(current + 1));
+$("#thumbsLeft").addEventListener("click", () => { $("#thumbs").scrollLeft -= 440; });
+$("#thumbsRight").addEventListener("click", () => { $("#thumbs").scrollLeft += 440; });
+
+// Teclado: flechas y Re Pág / Av Pág, salvo dentro de campos, videos o el juego
+addEventListener("keydown", e => {
+  if (e.altKey || e.ctrlKey || e.metaKey) return;
+  const t = e.target;
+  if (t.closest && t.closest("input, textarea, select, video, audio, canvas, [contenteditable], .seg, [role=tablist]")) return;
+  if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); showSlide(current + 1); }
+  else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); showSlide(current - 1); }
+  else if (e.key === "Home" && !t.closest(".slide-inner")) showSlide(0);
+});
+
+// Gesto de deslizar en pantallas táctiles (fuera de las zonas interactivas)
+(function swipe() {
+  let x0 = null, y0 = 0;
+  const SKIP = "canvas, input, video, audio, pre, .table-wrap, .seg, .input-pad, .hover-stage, .hero-stage, .rig-stage, .frame-strip, .thumbs, .topnav";
+  $("#deck").addEventListener("touchstart", e => {
+    x0 = e.target.closest(SKIP) || e.touches.length > 1 ? null : e.touches[0].clientX;
+    y0 = e.touches[0].clientY;
+  }, { passive: true });
+  $("#deck").addEventListener("touchend", e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+    if (Math.abs(dx) > 70 && Math.abs(dy) < 60) showSlide(current + (dx < 0 ? 1 : -1));
+    x0 = null;
+  });
+})();
+
+// Pantalla completa de toda la presentación
+$("#fullscreenDeck").addEventListener("click", () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen?.().catch(() => {});
+});
 
 /* ---------------------------------------------------------
-   3. Fotogramas reales del niño (portada y demostración de sprites)
+   3. El niño: fotogramas reales y reproductor de clips
+   Un solo temporizador a 7 fps (la velocidad de los clips de
+   Unity) mueve a todas las copias del niño de la página.
    --------------------------------------------------------- */
 const KID_FRAMES = {
   idle: Array.from({ length: 8 }, (_, i) => `assets/images/kid/idle_${i}.png`),
   question: Array.from({ length: 8 }, (_, i) => `assets/images/kid/question_${i}.png`),
 };
-const KID_FPS = 7; // la misma velocidad que los clips de Unity
+const KID_FPS = 7;
 Object.values(KID_FRAMES).flat().forEach(src => { const im = new Image(); im.src = src; });
 
-// Portada: reposo en bucle
-let heroFrame = 0;
-setInterval(() => { heroFrame = (heroFrame + 1) % 8; $("#heroKid").src = KID_FRAMES.idle[heroFrame]; }, 1000 / KID_FPS);
+const kidPlayers = [];
+// Reposo en bucle; «pensar» se reproduce una vez y vuelve solo al reposo (como Has Exit Time)
+function kidPlayer(img, onFrame) {
+  const p = {
+    clip: "idle", frame: 0,
+    play(clip) { p.clip = clip; p.frame = 0; p.draw(); },
+    draw() { img.src = KID_FRAMES[p.clip][p.frame]; onFrame && onFrame(p); },
+    tick() {
+      p.frame++;
+      if (p.frame >= 8) { p.frame = 0; if (p.clip !== "idle") p.clip = "idle"; }
+      p.draw();
+    },
+  };
+  kidPlayers.push(p);
+  return p;
+}
+setInterval(() => kidPlayers.forEach(p => {
+  // Solo se animan los que están a la vista (ahorra trabajo en las diapositivas ocultas)
+  if (p.img.closest(".slide.active")) p.tick();
+}), 1000 / KID_FPS);
+const kid = (img, onFrame) => Object.assign(kidPlayer(img, onFrame), { img });
+
+// Portada: el niño reacciona al tocarlo, y la tarjeta flotante lo muestra en reposo
+const heroKid = kid($("#heroKid"));
+$("#heroKidBtn").addEventListener("click", () => heroKid.play("question"));
+kid($("#cardKid"));
 
 // Demostración de sprites: reposo en bucle, «pensar» una vez y vuelta al reposo
-const spriteImg = $("#spriteDemo");
 const strip = $("#frameStrip");
-let spriteClip = "idle", spriteFrame = 0;
-function renderStrip() {
-  strip.innerHTML = KID_FRAMES[spriteClip].map((src, i) => `<img src="${src}" alt="Fotograma ${i + 1}" class="${i === spriteFrame ? "on" : ""}">`).join("");
-}
-renderStrip();
-setInterval(() => {
-  spriteFrame++;
-  if (spriteFrame >= 8) {
-    spriteFrame = 0;
-    if (spriteClip === "question") spriteClip = "idle"; // como Has Exit Time: termina y vuelve
-  }
-  spriteImg.src = KID_FRAMES[spriteClip][spriteFrame];
-  renderStrip();
-}, 1000 / KID_FPS);
-$$("[data-sprite]").forEach(b => b.addEventListener("click", () => { spriteClip = b.dataset.sprite; spriteFrame = 0; }));
+const spriteDemo = kid($("#spriteDemo"), p => {
+  strip.innerHTML = KID_FRAMES[p.clip].map((src, i) => `<img src="${src}" alt="Fotograma ${i + 1}" class="${i === p.frame ? "on" : ""}">`).join("");
+});
+spriteDemo.draw();
+$$("[data-sprite]").forEach(b => b.addEventListener("click", () => spriteDemo.play(b.dataset.sprite)));
 
 /* ---------------------------------------------------------
    4. Reproductor del prototipo real (Unity WebGL)
@@ -576,11 +637,19 @@ renderMethod();
 (function inputDemo() {
   const pad = $("#inputPad"), layer = $("#rippleLayer");
   const NAMES = { mouse: "🖱 Ratón", touch: "👆 Dedo", pen: "✏️ Lápiz" };
+  const inputKid = kid($("#inputKid"));
   let count = 0, last = 0;
+  // Un toque: animación real de pensar. Doble toque: se repite con un salto (el niño aún no tiene segunda animación)
+  function react(n) {
+    inputKid.play("question");
+    pad.classList.remove("jump");
+    if (n >= 2) { void pad.offsetWidth; pad.classList.add("jump"); }
+  }
   pad.addEventListener("pointerdown", e => {
     const now = performance.now();
     count = now - last <= 300 ? count + 1 : 1;
     last = now;
+    react(count);
     $("#inputType").textContent = NAMES[e.pointerType] || e.pointerType || "Desconocido";
     $("#inputCount").textContent = count;
     $("#inputAction").textContent = count >= 2 ? "DoubleTap (segunda animación)" : "IsClicked (primera animación)";
@@ -596,6 +665,7 @@ renderMethod();
   pad.addEventListener("keydown", e => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
+      react(1);
       $("#inputType").textContent = "⌨️ Teclado";
       $("#inputCount").textContent = 1;
       $("#inputAction").textContent = "IsClicked (primera animación)";
@@ -668,6 +738,12 @@ const FLOW = [
 let flowIdx = 0;
 const flowList = $("#flowSteps");
 const flowPanel = $("#flowPanel");
+// El niño acompaña cada paso: reposo, destello al detectar el clic, pensar y regreso al reposo
+const flowKid = kid($("#flowKid"));
+function flowPose() {
+  $(".flow-visual").classList.toggle("flash", flowIdx === 1 || flowIdx === 2);
+  flowKid.play(flowIdx >= 3 && flowIdx <= 5 ? "question" : "idle");
+}
 flowList.innerHTML = FLOW.map((f, i) => `<li><button role="tab" id="flow-tab-${i}" aria-controls="flowPanel" aria-selected="false" data-i="${i}"><span class="n">${i + 1}</span>${f.t}</button></li>`).join("");
 function renderFlow() {
   $$("button", flowList).forEach((b, i) => b.setAttribute("aria-selected", i === flowIdx));
@@ -678,6 +754,7 @@ function renderFlow() {
     <button class="btn btn-small btn-action-soft" id="flowNext" ${flowIdx === FLOW.length - 1 ? "disabled" : ""}>Siguiente ›</button></div></div>`;
   $("#flowPrev").onclick = () => { flowIdx--; renderFlow(); };
   $("#flowNext").onclick = () => { flowIdx++; renderFlow(); };
+  flowPose();
 }
 flowList.addEventListener("click", e => { const b = e.target.closest("button"); if (b) { flowIdx = +b.dataset.i; renderFlow(); } });
 flowList.addEventListener("keydown", e => {
@@ -779,90 +856,119 @@ $("#partsGrid").innerHTML = Object.entries(PART_NAMES).map(([f, n]) =>
 })();
 
 /* ---------------------------------------------------------
-   9. Demostración web de huesos con las capas reales de la niña
+   9. La niña con huesos, armada con sus capas reales
    Coordenadas en píxeles del documento .psb (600 × 760).
+   Se usa en la portada y en la diapositiva de huesos.
    --------------------------------------------------------- */
-(function rigDemo() {
-  const stage = $("#rigStage");
-  // Posición de cada capa (esquina superior izquierda) en el documento
-  const P = {
-    hair_back: [72, 94], backpack: [182, 379], leg_L: [239, 544], leg_R: [306, 544], foot_L: [214, 679], foot_R: [298, 679],
-    torso: [187, 364], arm_upper_L: [177, 384], arm_lower_L: [171, 447], hand_L: [162, 522],
-    arm_upper_R: [340, 384], arm_lower_R: [372, 447], hand_R: [382, 522], head: [154, 128], hair_front: [142, 95],
-  };
-  const img = n => `<img src="assets/images/partes/${n}.png" alt="" style="left:${P[n][0]}px;top:${P[n][1]}px">`;
+const RIG_POS = {
+  hair_back: [72, 94], backpack: [182, 379], leg_L: [239, 544], leg_R: [306, 544], foot_L: [214, 679], foot_R: [298, 679],
+  torso: [187, 364], arm_upper_L: [177, 384], arm_lower_L: [171, 447], hand_L: [162, 522],
+  arm_upper_R: [340, 384], arm_lower_R: [372, 447], hand_R: [382, 522], head: [154, 128], hair_front: [142, 95],
+};
+const HIP_Y = 575, SHOULDER_Y = 412, BREATH = 0.03; // el pecho se estira un 3 % desde la cadera
+
+function buildRig(host) {
+  const img = n => `<img src="assets/images/partes/${n}.png" alt="" draggable="false" style="left:${RIG_POS[n][0]}px;top:${RIG_POS[n][1]}px">`;
   // Hueso visual: desde (x1,y1) hasta (x2,y2)
   const bone = (x1, y1, x2, y2) => {
     const len = Math.hypot(x2 - x1, y2 - y1), ang = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
     return `<span class="bone" style="left:${x1}px;top:${y1}px;width:${len}px;transform:rotate(${ang}deg)"></span>`;
   };
   // Grupo articulado: gira alrededor de su articulación (origen)
-  const g = (id, ox, oy, inner) => `<div class="g" data-j="${id}" style="transform-origin:${ox}px ${oy}px">${inner}</div>`;
+  const g = (j, ox, oy, inner) => `<div class="g" data-j="${j}" style="transform-origin:${ox}px ${oy}px">${inner}</div>`;
+  const side = s => v => (s === "L" ? v : 600 - v);
   const arm = s => {
-    const m = v => (s === "L" ? v : 600 - v);
-    return g("arm_upper_" + s, m(232), 412,
-      img("arm_upper_" + s) + bone(m(232), 412, m(205), 474) +
+    const m = side(s);
+    return g("arm_upper_" + s, m(232), SHOULDER_Y,
+      img("arm_upper_" + s) + bone(m(232), SHOULDER_Y, m(205), 474) +
       g("arm_lower_" + s, m(205), 474,
         img("arm_lower_" + s) + bone(m(205), 474, m(192), 532) +
         g("hand_" + s, m(192), 532, img("hand_" + s) + bone(m(192), 532, m(190), 568))));
   };
   const leg = s => {
-    const m = v => (s === "L" ? v : 600 - v);
-    return g("leg_" + s, m(268), 575, img("leg_" + s) + bone(m(268), 575, m(265), 688) +
+    const m = side(s);
+    return g("leg_" + s, m(268), HIP_Y, img("leg_" + s) + bone(m(268), HIP_Y, m(265), 688) +
       g("foot_" + s, m(265), 688, img("foot_" + s) + bone(m(265), 688, m(250), 712)));
   };
-  // El orden de dibujo es el mismo que el de las capas del .psb
-  stage.innerHTML = `<div class="rig-canvas" id="rigCanvas">
+  // Se respeta el orden de las capas del .psb. Como el cabello trasero va detrás del torso pero
+  // pertenece a la cabeza, cabeza y cuerpo aparecen en dos grupos que se animan siempre juntos:
+  //   "body" = torso y mochila: se estira desde la cadera (respiración)
+  //   "up"   = brazos y cabeza: suben exactamente lo que se estira el torso, así no se separan
+  host.innerHTML = `<div class="rig-canvas">
     ${g("root", 300, 700, `
-      <div class="g" data-breathe>${g("head_back", 300, 392, img("hair_back"))}${img("backpack")}</div>
+      ${g("up", 300, SHOULDER_Y, g("head", 300, 392, img("hair_back")))}
+      ${g("body", 300, HIP_Y, img("backpack"))}
       ${leg("L")}${leg("R")}
-      <div class="g">${img("torso")}${bone(300, 575, 300, 480)}${bone(300, 480, 300, 395)}</div>
-      <div class="g" data-breathe>${arm("L")}${arm("R")}${g("head", 300, 392, img("head") + img("hair_front") + bone(300, 392, 300, 150))}</div>
+      ${g("body", 300, HIP_Y, img("torso") + bone(300, HIP_Y, 300, 480) + bone(300, 480, 300, 395))}
+      ${g("up", 300, SHOULDER_Y, arm("L") + arm("R") + g("head", 300, 392, img("head") + img("hair_front") + bone(300, 392, 300, 150)))}
     `)}
   </div>`;
-  const canvas = $("#rigCanvas");
-  const J = id => $(`[data-j="${id}"]`, canvas);
+  const canvas = $(".rig-canvas", host);
+  const all = j => $$(`[data-j="${j}"]`, canvas);
 
   function fit() {
-    const s = Math.min(stage.clientWidth / 600, stage.clientHeight / 760) * 0.92;
-    canvas.style.transform = `translate(-50%, -50%) scale(${s})`;
+    const s = Math.min(host.clientWidth / 600, host.clientHeight / 760);
+    if (s > 0) canvas.style.transform = `translate(-50%, -50%) scale(${s})`;
   }
-  addEventListener("resize", fit);
+  new ResizeObserver(fit).observe(host);
   fit();
 
-  // Respiración: la parte superior sube y baja levemente; la cabeza y los brazos se mecen
+  const lift = k => `translateY(${-(k - 1) * (HIP_Y - SHOULDER_Y)}px)`; // cuánto sube el hombro si el torso se escala k
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const anim = (j, frames, o) => all(j).map(el => el.animate(frames, o));
+
+  // Reposo (como NewChar_Idle, 2 s en bucle): respiración, cabeza y brazos se mecen
   if (!reduce) {
-    $$("[data-breathe]", canvas).forEach(el => el.animate([{ transform: "translateY(0)" }, { transform: "translateY(-5px)" }, { transform: "translateY(0)" }], { duration: 2000, iterations: Infinity, easing: "ease-in-out" }));
+    const loop = { duration: 2000, iterations: Infinity, easing: "ease-in-out" };
+    anim("body", [{ transform: "scaleY(1)" }, { transform: `scaleY(${1 + BREATH})` }, { transform: "scaleY(1)" }], loop);
+    anim("up", [{ transform: lift(1) }, { transform: lift(1 + BREATH) }, { transform: lift(1) }], loop);
+    anim("head", [{ transform: "rotate(0)" }, { transform: "rotate(1.5deg)" }, { transform: "rotate(0)" }], loop);
+    anim("arm_upper_L", [{ transform: "rotate(0)" }, { transform: "rotate(2.5deg)" }, { transform: "rotate(0)" }], loop);
+    anim("arm_upper_R", [{ transform: "rotate(0)" }, { transform: "rotate(-2.5deg)" }, { transform: "rotate(0)" }], loop);
   }
 
-  // Saludo: se agacha, salta, levanta el brazo derecho y mueve el antebrazo (similar a NewChar_Clicked)
-  $("#rigWave").addEventListener("click", () => {
-    const o = { duration: 1300, easing: "ease-in-out" };
-    J("root").animate([
-      { transform: "translateY(0)", offset: 0 }, { transform: "translateY(12px)", offset: 0.09 },
-      { transform: "translateY(-75px)", offset: 0.32 }, { transform: "translateY(0)", offset: 0.55 },
-      { transform: "translateY(4px)", offset: 0.63 }, { transform: "translateY(0)", offset: 1 }], o);
-    J("arm_upper_R").animate([
-      { transform: "rotate(0)", offset: 0 }, { transform: "rotate(-115deg)", offset: 0.2 },
-      { transform: "rotate(-115deg)", offset: 0.77 }, { transform: "rotate(0)", offset: 1 }], o);
-    J("arm_lower_R").animate([
-      { transform: "rotate(0)", offset: 0 }, { transform: "rotate(-20deg)", offset: 0.2 }, { transform: "rotate(20deg)", offset: 0.31 },
-      { transform: "rotate(-25deg)", offset: 0.42 }, { transform: "rotate(20deg)", offset: 0.54 }, { transform: "rotate(-25deg)", offset: 0.65 },
-      { transform: "rotate(0)", offset: 0.77 }, { transform: "rotate(0)", offset: 1 }], o);
-    J("arm_upper_L").animate([{ transform: "rotate(0)" }, { transform: "rotate(25deg)", offset: 0.32 }, { transform: "rotate(0)", offset: 0.62 }, { transform: "rotate(0)" }], o);
-    ["head", "head_back"].forEach(id => J(id).animate([{ transform: "rotate(0)" }, { transform: "rotate(8deg)", offset: 0.23 }, { transform: "rotate(8deg)", offset: 0.77 }, { transform: "rotate(0)" }], o));
-    J("leg_L").animate([{ transform: "rotate(0)" }, { transform: "rotate(10deg)", offset: 0.32 }, { transform: "rotate(0)", offset: 0.55 }, { transform: "rotate(0)" }], o);
-    J("leg_R").animate([{ transform: "rotate(0)" }, { transform: "rotate(-10deg)", offset: 0.32 }, { transform: "rotate(0)", offset: 0.55 }, { transform: "rotate(0)" }], o);
-  });
+  // Acción (como NewChar_Clicked, 1,3 s): se agacha, salta, saluda con el brazo derecho y aterriza.
+  // El brazo se levanta hacia afuera, para que la mano quede delante del cabello y no detrás de la cabeza.
+  let busy = false;
+  function wave() {
+    if (busy) return;
+    busy = true;
+    const o = { duration: 1300, easing: "ease-in-out", composite: "replace" };
+    const done = anim("root", [
+      { transform: "translateY(0)", offset: 0 }, { transform: "translateY(12px)", offset: 0.1 },
+      { transform: "translateY(-60px)", offset: 0.32 }, { transform: "translateY(0)", offset: 0.55 },
+      { transform: "translateY(5px)", offset: 0.62 }, { transform: "translateY(0)", offset: 1 }], o);
+    anim("body", [{ transform: "scaleY(1)", offset: 0 }, { transform: "scaleY(.97)", offset: 0.1 }, { transform: "scaleY(1)", offset: 0.22 },
+      { transform: "scaleY(.98)", offset: 0.62 }, { transform: "scaleY(1)", offset: 1 }], o);
+    anim("up", [{ transform: lift(1), offset: 0 }, { transform: lift(.97), offset: 0.1 }, { transform: lift(1), offset: 0.22 },
+      { transform: lift(.98), offset: 0.62 }, { transform: lift(1), offset: 1 }], o);
+    anim("arm_upper_R", [{ transform: "rotate(0)", offset: 0 }, { transform: "rotate(-80deg)", offset: 0.18 },
+      { transform: "rotate(-80deg)", offset: 0.78 }, { transform: "rotate(0)", offset: 1 }], o);
+    anim("arm_lower_R", [{ transform: "rotate(0)", offset: 0 }, { transform: "rotate(-60deg)", offset: 0.18 },
+      { transform: "rotate(-88deg)", offset: 0.3 }, { transform: "rotate(-55deg)", offset: 0.42 }, { transform: "rotate(-88deg)", offset: 0.54 },
+      { transform: "rotate(-55deg)", offset: 0.66 }, { transform: "rotate(-60deg)", offset: 0.78 }, { transform: "rotate(0)", offset: 1 }], o);
+    anim("arm_upper_L", [{ transform: "rotate(0)" }, { transform: "rotate(8deg)", offset: 0.32 }, { transform: "rotate(0)", offset: 0.62 }, { transform: "rotate(0)" }], o);
+    anim("head", [{ transform: "rotate(0)" }, { transform: "rotate(-5deg)", offset: 0.23 }, { transform: "rotate(-5deg)", offset: 0.77 }, { transform: "rotate(0)" }], o);
+    anim("leg_L", [{ transform: "rotate(0)" }, { transform: "rotate(6deg)", offset: 0.32 }, { transform: "rotate(0)", offset: 0.55 }, { transform: "rotate(0)" }], o);
+    anim("leg_R", [{ transform: "rotate(0)" }, { transform: "rotate(-6deg)", offset: 0.32 }, { transform: "rotate(0)", offset: 0.55 }, { transform: "rotate(0)" }], o);
+    done[0].finished.then(() => { busy = false; });
+  }
+  return { wave, fit };
+}
 
-  const bonesBtn = $("#rigBones");
-  bonesBtn.addEventListener("click", () => {
-    const on = stage.classList.toggle("show-bones");
-    bonesBtn.setAttribute("aria-pressed", on);
-    bonesBtn.textContent = on ? "Ocultar huesos" : "Mostrar huesos";
-  });
-})();
+// Portada: la niña saluda al tocarla
+const heroRig = buildRig($("#heroRig"));
+$("#heroGirlBtn").addEventListener("click", heroRig.wave);
+
+// Diapositiva de huesos: mostrar el esqueleto y saludar
+const demoRig = buildRig($("#rigHost"));
+$("#rigWave").addEventListener("click", demoRig.wave);
+const bonesBtn = $("#rigBones");
+bonesBtn.addEventListener("click", () => {
+  const on = $("#rigStage").classList.toggle("show-bones");
+  bonesBtn.setAttribute("aria-pressed", on);
+  bonesBtn.textContent = on ? "Ocultar huesos" : "Mostrar huesos";
+});
 
 /* ---------------------------------------------------------
    10. Demostración de hover
@@ -872,6 +978,8 @@ $("#partsGrid").innerHTML = Object.entries(PART_NAMES).map(([f, n]) =>
   const status = $("#hoverStatus");
   let style = "brighten";
   stage.classList.add(style);
+  // El niño respira en reposo; el tono cálido usa el fotograma actual como máscara para no salirse de la silueta
+  kid($("#hoverImg"), p => stage.style.setProperty("--kid-mask", `url("${KID_FRAMES[p.clip][p.frame]}")`));
   const set = on => {
     stage.classList.toggle("on", on);
     status.textContent = on ? "Cursor encima: el personaje está resaltado." : "Cursor fuera: se restauró el color original.";
@@ -916,3 +1024,8 @@ function renderArch(i) {
 }
 archEl.addEventListener("click", e => { const b = e.target.closest("button"); if (b) renderArch(+b.dataset.i); });
 renderArch(0);
+
+/* ---------------------------------------------------------
+   14. Abrir en la diapositiva del enlace (por ejemplo …/#prototipo) o en la portada
+   --------------------------------------------------------- */
+showSlide(Math.max(0, indexOfId(location.hash.slice(1))), { updateHash: false });
