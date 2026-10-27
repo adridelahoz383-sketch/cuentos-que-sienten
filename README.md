@@ -139,4 +139,4 @@ unityInstance.SendMessage("WebBridge", "PlayKidAction", "IsClicked");
 - [ ] Adaptar la entrada a pantallas táctiles antes de presentarlo en tabletas.
 - [ ] Sustituir las ilustraciones, animaciones y audios de prueba por los definitivos del cliente.
 - [ ] Actualizar la lista de temas a tratar (`TOPICS` en `script.js`) cuando se resuelva cada punto.
-- [ ] Al modificar `styles.css` o `script.js`, subir el número de versión (`?v=10` en styles.css) en `index.html` para que los navegadores no muestren la copia vieja guardada en caché.
+- [ ] Al modificar `styles.css` o `script.js`, subir el número de versión (`?v=11` en styles.css) en `index.html` para que los navegadores no muestren la copia vieja guardada en caché.
