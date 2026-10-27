@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cuentos que Sienten · Prototipo interactivo</title>
+  <meta name="description" content="Presentación técnica y demostración real del prototipo de Cuentos que Sienten desarrollado en Unity.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=6">
+</head>
+<body>
+
+<!-- ============ Barra superior: progreso + navegación ============ -->
+<header class="topbar">
+  <div class="progress" aria-hidden="true"><span id="progressFill"></span></div>
+  <nav class="topnav" aria-label="Secciones">
+    <a href="#portada" class="brand">Cuentos <b>que Sienten</b></a>
+    <button class="menu-toggle" id="menuToggle" aria-expanded="false" aria-controls="navLinks">Secciones</button>
+    <ul id="navLinks">
+      <li><a href="#prototipo">Probar</a></li>
+      <li><a href="#temas">Temas a tratar</a></li>
+      <li><a href="#interaccion">Interacción</a></li>
+      <li><a href="#desarrollo">Desarrollo</a></li>
+      <li><a href="#entrada">Toque</a></li>
+      <li><a href="#huesos">Huesos 2D</a></li>
+      <li><a href="#hover">Hover</a></li>
+      <li><a href="#audio">Audio</a></li>
+      <li><a href="#arquitectura">Arquitectura</a></li>
+      <li><a href="#conclusiones">Conclusiones</a></li>
+    </ul>
+  </nav>
+</header>
+
+<!-- Controles flotantes: anterior / siguiente / portada -->
+<div class="floatnav" aria-label="Navegación entre secciones">
+  <button id="prevSection" title="Sección anterior" aria-label="Sección anterior">‹</button>
+  <button id="homeSection" title="Volver a la portada" aria-label="Volver a la portada">⌂</button>
+  <button id="nextSection" title="Sección siguiente" aria-label="Sección siguiente">›</button>
+</div>
+
+<main>
+
+<!-- ============ 1. Portada ============ -->
+<section id="portada" class="hero" data-section>
+  <div class="hero-text">
+    <span class="eyebrow">Proyecto educativo · Prototipo</span>
+    <h1>Cuentos que Sienten</h1>
+    <p class="subtitle">Prototipo interactivo en Unity: personajes, animaciones e interacciones.</p>
+    <p class="intro">Un cuento ilustrado donde la escena permanece quieta y los personajes cobran vida cuando un niño los toca. Cada reacción ayuda a reconocer emociones y a entender qué se debe hacer y qué no.</p>
+    <div class="hero-actions">
+      <a class="btn btn-action" href="#prototipo">▶ Probar el prototipo</a>
+      <a class="btn btn-ghost" href="#interaccion">Explorar el desarrollo</a>
+    </div>
+  </div>
+  <div class="hero-art" aria-hidden="true">
+    <div class="hero-blob"></div>
+    <img id="heroKid" class="hero-kid" src="assets/images/kid/idle_0.png" alt="">
+    <img class="hero-girl" src="assets/images/nina_completa.png" alt="">
+  </div>
+</section>
+
+<!-- ============ 2. Prototipo real (Unity WebGL) ============ -->
+<section id="prototipo" data-section>
+  <div class="section-head">
+    <span class="tag tag-real">Proyecto real · Unity WebGL</span>
+    <h2>Prueba el prototipo real</h2>
+    <p>Esta ventana ejecuta la compilación original de Unity en el navegador. No es una recreación: es la misma escena del proyecto.</p>
+  </div>
+
+  <div class="player-layout">
+    <div class="player-card">
+      <div class="unity-frame" id="unityFrame">
+        <canvas id="unity-canvas" tabindex="-1" aria-label="Prototipo de Unity"></canvas>
+
+        <!-- Pantalla previa: el juego no se descarga hasta pulsar el botón -->
+        <div class="unity-overlay" id="unityIntro">
+          <img src="assets/images/escena_unity.png" alt="Captura de la escena del prototipo en Unity" class="unity-poster">
+          <div class="unity-overlay-content">
+            <button class="btn btn-action btn-lg" id="startUnity">▶ Iniciar experiencia</button>
+            <p class="small" id="buildSizeNote">Se descargará la compilación del prototipo.</p>
+          </div>
+        </div>
+
+        <div class="unity-overlay hidden" id="unityLoading" role="status" aria-live="polite">
+          <div class="loader-box">
+            <p>Cargando el prototipo…</p>
+            <div class="bar"><span id="unityProgress"></span></div>
+            <p class="small" id="unityProgressText">0 %</p>
+          </div>
+        </div>
+
+        <div class="unity-overlay hidden" id="unityError" role="alert">
+          <div class="loader-box error-box">
+            <p><b>No se pudo cargar el prototipo.</b></p>
+            <p class="small" id="unityErrorText"></p>
+            <button class="btn btn-ghost" id="retryUnity">Intentar de nuevo</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="player-controls">
+        <button class="btn btn-small" id="restartUnity" disabled>↻ Reiniciar experiencia</button>
+        <button class="btn btn-small" id="fullscreenUnity" disabled>⛶ Pantalla completa</button>
+        <span class="status-pill" id="unityStatus">Sin iniciar</span>
+      </div>
+    </div>
+
+    <aside class="player-guide">
+      <h3>Qué puedes probar</h3>
+      <ol class="try-list">
+        <li><b>Observa la escena.</b> El fondo está quieto; el niño y la niña respiran y se mueven levemente (animación de reposo).</li>
+        <li><b>Pasa el cursor sobre el niño.</b> Se aclara para indicar que se puede tocar.</li>
+        <li><b>Haz clic sobre el niño.</b> Pone su gesto de pensar, suena el efecto «pensar» y vuelve solo al reposo.</li>
+        <li><b>Pasa el cursor sobre la niña.</b> Todas sus partes toman un tono cálido.</li>
+        <li><b>Haz clic sobre la niña.</b> Salta y saluda con el brazo (animación por huesos) y vuelve al reposo. Esta acción todavía no tiene sonido.</li>
+        <li><b>Música de fondo.</b> Empieza con el primer clic dentro del juego (los navegadores bloquean el audio hasta que el usuario interactúa) y dura 24 s, porque en esta versión no está en bucle.</li>
+      </ol>
+      <div class="note note-warn">
+        <b>Limitaciones de esta versión</b>
+        <ul>
+          <li>Las interacciones responden al <b>ratón</b>. En celulares y tabletas el toque todavía no está adaptado.</li>
+          <li>WebGL necesita un navegador de escritorio actual (Chrome, Edge, Firefox o Safari) y abrir la página desde un servidor, no con doble clic sobre el archivo.</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ============ 3. Temas a tratar ============ -->
+<section id="temas" data-section>
+  <div class="section-head">
+    <span class="tag tag-orange">Temas a tratar</span>
+    <h2>Temas a tratar</h2>
+    <p>Lo que falta por hacer en el prototipo y cómo se haría cada punto. Abre cada tema para ver el estado actual, los pasos y cómo comprobar que funciona.</p>
+  </div>
+  <div class="topic-filters seg" role="radiogroup" aria-label="Filtrar temas" id="topicFilters"><!-- script.js --></div>
+  <div class="accordion-list" id="topicList"><!-- script.js --></div>
+</section>
+
+<!-- ============ 4. Cómo funciona una interacción ============ -->
+<section id="interaccion" data-section>
+  <div class="section-head">
+    <span class="tag tag-blue">Explicación</span>
+    <h2>Cómo funciona una interacción</h2>
+    <p>Selecciona cada paso para ver qué ocurre por dentro cuando el niño hace clic sobre el personaje.</p>
+  </div>
+
+  <div class="flow-example" aria-label="Ejemplo de flujo real del prototipo">
+    <span class="flow-node state">AnimationKid</span><span class="arrow">→</span>
+    <span class="flow-node event">Clic detectado</span><span class="arrow">→</span>
+    <span class="flow-node param">IsClicked</span><span class="arrow">→</span>
+    <span class="flow-node state">AnimationQuestion</span><span class="arrow">→</span>
+    <span class="flow-node state">AnimationKid</span>
+  </div>
+
+  <div class="stepper">
+    <ol class="stepper-list" id="flowSteps" role="tablist"><!-- script.js --></ol>
+    <div class="stepper-panel" id="flowPanel" role="tabpanel" aria-live="polite"></div>
+  </div>
+
+  <div class="compare two-col">
+    <div class="card">
+      <h3><span class="chip chip-param">Trigger</span> Pide que algo ocurra una vez</h3>
+      <p>Funciona como un timbre: se activa, el Animator lo usa para cambiar de estado y se apaga solo. Es el tipo que usa el prototipo con <code>IsClicked</code>.</p>
+      <pre><code>animator.SetTrigger("IsClicked");</code></pre>
+    </div>
+    <div class="card">
+      <h3><span class="chip chip-param">Bool</span> Representa una condición que se mantiene</h3>
+      <p>Funciona como un interruptor: queda en <code>true</code> o <code>false</code> hasta que alguien lo cambie. Útil para estados duraderos, por ejemplo «está triste».</p>
+      <pre><code>animator.SetBool("EstaTriste", true);</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. Desarrollo del sistema de interacción ============ -->
+<section id="desarrollo" data-section>
+  <div class="section-head">
+    <span class="tag tag-blue">Implementación</span>
+    <h2>Desarrollo del sistema de interacción en Unity</h2>
+    <p>El paso a paso de cómo el niño del prototipo responde al clic.</p>
+  </div>
+
+  <div class="steps">
+    <article class="step-card">
+      <span class="step-num">1</span>
+      <h3>Preparar el personaje</h3>
+      <p>El objeto del niño en la escena tiene estos componentes:</p>
+      <ul class="comp-list">
+        <li><b>Sprite Renderer</b> muestra la imagen del personaje.</li>
+        <li><b>Animator</b> controla los estados y las animaciones (controlador <code>AnimatorKid</code>).</li>
+        <li><b>Box Collider 2D</b> define el área que recibe la interacción.</li>
+        <li><b>Audio Source</b> reproduce el sonido de la acción.</li>
+        <li><b>IsCliked</b> (script) conecta el ratón con el Animator y el sonido.</li>
+      </ul>
+    </article>
+
+    <article class="step-card">
+      <span class="step-num">2</span>
+      <h3>Detectar el clic</h3>
+      <p>El prototipo usa el <b>New Input System</b> de Unity (el sistema de entrada actual) para leer el botón izquierdo del ratón. La forma más simple sería:</p>
+      <pre><code>if (Mouse.current != null &amp;&amp;
+    Mouse.current.leftButton.wasPressedThisFrame)
+{
+    Debug.Log("Clic detectado");
+    animatorKid.SetTrigger("IsClicked");
+}</code></pre>
+      <p>Pero así cualquier clic en la pantalla activaría al niño. Por eso el script real también comprueba que el cursor esté <b>sobre el personaje</b>:</p>
+      <pre><code>// Posición del ratón en pantalla → posición en el mundo del juego
+Vector2 mousePosition = Camera.main.ScreenToWorldPoint(
+    Mouse.current.position.ReadValue());
+
+// ¿Ese punto cae dentro del collider del personaje?
+bool over = collider.OverlapPoint(mousePosition);
+
+if (over &amp;&amp; Mouse.current.leftButton.wasPressedThisFrame)
+{
+    animatorKid.SetTrigger("IsClicked");
+    audioSource.PlayOneShot(audioSource.clip);
+}</code></pre>
+      <p class="note note-info">Para tabletas y celulares hay que adaptar la entrada a pantallas táctiles (ver <a href="#entrada">Cómo se haría con un sistema de clic distinto al ratón</a>).</p>
+    </article>
+
+    <article class="step-card">
+      <span class="step-num">3</span>
+      <h3>Obtener el Animator</h3>
+      <pre><code>// Al iniciar, el script guarda una referencia al Animator del mismo objeto
+animatorKid = GetComponent&lt;Animator&gt;();</code></pre>
+      <p>Con esa referencia el script puede «hablar» con el Animator y pedirle que cambie de animación.</p>
+    </article>
+
+    <article class="step-card">
+      <span class="step-num">4</span>
+      <h3>Activar la animación</h3>
+      <pre><code>animatorKid.SetTrigger("IsClicked");</code></pre>
+      <p>El texto <code>"IsClicked"</code> debe coincidir <b>exactamente</b> con el parámetro del Animator Controller, incluidas mayúsculas. Si no coincide, Unity muestra un aviso en la consola y no pasa nada.</p>
+    </article>
+
+    <article class="step-card wide">
+      <span class="step-num">5</span>
+      <h3>Configurar las transiciones</h3>
+      <div class="state-diagram" aria-label="Diagrama de estados">
+        <span class="flow-node state">Idle</span><span class="arrow">→</span>
+        <span class="flow-node event">Interacción</span><span class="arrow">→</span>
+        <span class="flow-node state">Question</span><span class="arrow">→</span>
+        <span class="flow-node event">Fin de animación</span><span class="arrow">→</span>
+        <span class="flow-node state">Idle</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Transición</th><th>Condición</th><th>Has Exit Time</th><th>Por qué</th></tr></thead>
+          <tbody>
+            <tr><td><b>Idle</b> (AnimationKid) → <b>Question</b> (AnimationQuestion)</td><td><code>IsClicked</code></td><td>Desactivado</td><td>Debe responder en cuanto se hace clic, sin esperar a que termine el reposo.</td></tr>
+            <tr><td><b>Question</b> → <b>Idle</b></td><td>Ninguna</td><td>Activado (1)</td><td>Vuelve al reposo cuando la animación de pensar termina.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="comp-list">
+        <li><b>Estado inicial:</b> <code>Idle</code> está marcado como estado por defecto (en naranja en el Animator). Se marca con clic derecho → <i>Set as Layer Default State</i>.</li>
+        <li><b>Has Exit Time</b> obliga a esperar a que la animación llegue a cierto punto antes de cambiar. Úsalo para «terminar y volver»; desactívalo para «reaccionar ya».</li>
+        <li><b>Clips:</b> <code>AnimationKid</code> está en bucle (Loop Time activado) y <code>AnimationQuestion</code> se reproduce una sola vez. Ambos tienen 8 fotogramas a 7 fotogramas por segundo (unos 1,14 s).</li>
+      </ul>
+
+      <details class="accordion">
+        <summary>Errores frecuentes y cómo reconocerlos</summary>
+        <div class="accordion-body">
+          <dl class="faq">
+            <dt>Parámetro mal escrito</dt>
+            <dd><code>SetTrigger("isClicked")</code> no activa <code>IsClicked</code>. La consola avisa «Parameter does not exist».</dd>
+            <dt>Estado inicial incorrecto</dt>
+            <dd>Si el estado por defecto es <code>Question</code>, el personaje empieza pensando. Revisa cuál está en naranja.</dd>
+            <dt>Clip de acción en bucle</dt>
+            <dd>Si <code>AnimationQuestion</code> tiene Loop Time activado, la transición con Exit Time puede repetir la acción antes de volver.</dd>
+            <dt>Condiciones contradictorias o bucles</dt>
+            <dd>Una transición de vuelta sin Exit Time ni condición se dispara al instante y la acción nunca se ve. Dos transiciones que se activan mutuamente crean un ciclo sin fin.</dd>
+            <dt>Referencias sin asignar</dt>
+            <dd>Sin Animator, Collider 2D o Audio Source en el objeto, el script falla (NullReferenceException) o no detecta el clic.</dd>
+          </dl>
+        </div>
+      </details>
+    </article>
+  </div>
+</section>
+
+<!-- ============ 5b. Otros sistemas de clic ============ -->
+<section id="entrada" data-section>
+  <div class="section-head">
+    <span class="tag tag-orange">Propuesta técnica · no implementado</span>
+    <h2>Cómo se haría con un sistema de clic distinto al ratón</h2>
+    <p>Hoy el prototipo lee <code>Mouse.current</code>, que solo entiende el ratón. Estas son cuatro formas de detectar el clic o el toque que funcionan también con el dedo o con un lápiz, de la más sencilla a la más completa.</p>
+  </div>
+
+  <div class="note note-info input-today">
+    <b>Cómo funciona ahora:</b> en cada fotograma el script pregunta «¿se presionó el botón izquierdo del <i>ratón</i>?». En una tableta no hay ratón, así que la pregunta siempre responde «no» y el personaje nunca reacciona.
+  </div>
+
+  <div class="method-tabs seg" role="tablist" aria-label="Sistemas de entrada" id="methodTabs"><!-- script.js --></div>
+  <div class="card method-panel" id="methodPanel" role="tabpanel" aria-live="polite"></div>
+
+  <h3 class="sub-head">Comparación</h3>
+  <div class="table-wrap">
+    <table class="method-table">
+      <thead>
+        <tr><th>Sistema</th><th>Ratón</th><th>Dedo</th><th>Doble toque</th><th>Varios dedos a la vez</th><th>Cambio en el proyecto</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><b>Actual:</b> <code>Mouse.current</code></td><td>✅</td><td>❌</td><td>Manual</td><td>❌</td><td>—</td></tr>
+        <tr><td><b>A.</b> <code>Pointer.current</code></td><td>✅</td><td>✅</td><td>Manual</td><td>❌ (solo el primer dedo)</td><td>Muy pequeño: cambiar 3 líneas</td></tr>
+        <tr><td><b>B.</b> Input Actions (Tap / Multi Tap)</td><td>✅</td><td>✅</td><td>✅ Configurable</td><td>❌</td><td>Medio: un archivo de acciones y un script nuevo</td></tr>
+        <tr class="recommended"><td><b>C.</b> Event System + <code>IPointerClickHandler</code></td><td>✅</td><td>✅</td><td>✅ <code>clickCount</code></td><td>✅</td><td>Medio: un componente en la cámara y un script nuevo</td></tr>
+        <tr><td><b>D.</b> Enhanced Touch</td><td>❌ (salvo simulación)</td><td>✅</td><td>✅ <code>tapCount</code></td><td>✅</td><td>Medio: solo pensado para táctil</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note note-warn"><b>Recomendación para este proyecto:</b> la opción <b>C</b>. Cada personaje recibe sus propios avisos de «me tocaron», «el dedo o el cursor entró» y «salió», sin revisar nada en cada fotograma. Además, funciona igual con ratón, dedo y lápiz, cuenta los toques para el doble toque y admite que dos niños toquen a la vez. Si solo se busca adaptar rápido el prototipo actual, la opción <b>A</b> es el cambio más pequeño.</p>
+
+  <h3 class="sub-head">Pruébalo: ¿con qué estás tocando?</h3>
+  <div class="input-demo">
+    <span class="tag tag-web">Demostración web</span>
+    <div class="input-pad" id="inputPad" tabindex="0" aria-label="Zona de prueba: haz clic o toca">
+      <img src="assets/images/kid/idle_0.png" alt="" draggable="false">
+      <span class="ripple-layer" id="rippleLayer"></span>
+    </div>
+    <div class="input-readout" aria-live="polite">
+      <div><span class="small">Dispositivo detectado</span><b id="inputType">—</b></div>
+      <div><span class="small">Toques seguidos</span><b id="inputCount">0</b></div>
+      <div><span class="small">Acción que se activaría</span><b id="inputAction">—</b></div>
+    </div>
+    <p class="small">El navegador, como el <code>Pointer</code> de Unity, trata igual al ratón, al dedo y al lápiz, y además informa cuál se usó. Dos toques en menos de 0,3 s cuentan como doble toque.</p>
+  </div>
+</section>
+
+<!-- ============ 6. Animaciones por huesos ============ -->
+<section id="huesos" data-section>
+  <div class="section-head">
+    <span class="tag tag-blue">Técnica</span>
+    <h2>Animaciones mediante huesos 2D</h2>
+    <p>El niño se anima con <b>sprites</b> (dibujos que se cambian uno tras otro). La niña del prototipo se preparó con <b>huesos</b> (un esqueleto que mueve sus partes). Estas son las etapas.</p>
+  </div>
+
+  <div class="video-block">
+    <h3>Videos paso a paso</h3>
+    <div class="video-tabs seg" role="tablist" aria-label="Elegir video">
+      <button class="seg-btn active" role="tab" aria-selected="true" aria-controls="videoPanel" data-video="sprites">🎞 Proceso con sprites (niño)</button>
+      <button class="seg-btn" role="tab" aria-selected="false" aria-controls="videoPanel" data-video="huesos">🦴 Proceso con huesos (niña)</button>
+    </div>
+    <div class="video-layout" id="videoPanel" role="tabpanel">
+      <div class="video-frame">
+        <video id="howtoVideo" controls preload="metadata" playsinline poster="assets/video/sprites_poster.jpg">
+          <source src="assets/video/sprites.mp4" type="video/mp4">
+          Tu navegador no puede reproducir este video.
+        </video>
+      </div>
+      <aside class="video-chapters">
+        <h4 id="videoTitle">Proceso con sprites</h4>
+        <ol id="videoChapters"><!-- script.js --></ol>
+        <p class="small">Toca un paso para saltar a ese momento del video.</p>
+      </aside>
+    </div>
+    <p class="small">Videos explicativos hechos con los recursos reales del proyecto: la hoja de sprites del niño y el archivo por capas de la niña. Muestran el proceso y los ajustes de Unity, pero no son grabaciones de pantalla del editor.</p>
+    <details class="accordion">
+      <summary>Tutoriales oficiales de Unity (en inglés)</summary>
+      <div class="accordion-body">
+        <ul class="comp-list">
+          <li><a href="https://learn.unity.com/tutorial/introduction-to-sprite-animations" target="_blank" rel="noopener">Introduction to Sprite Animations</a>: animar a partir de una hoja de sprites.</li>
+          <li><a href="https://learn.unity.com/tutorial/rigging-a-sprite-with-the-2d-animation-package" target="_blank" rel="noopener">Rigging a Sprite with the 2D Animation Package</a>: huesos, geometría y pesos en el Skinning Editor.</li>
+          <li><a href="https://learn.unity.com/tutorial/animating-a-sprite-with-the-2d-animation-package" target="_blank" rel="noopener">Animating a Sprite with the 2D Animation Package</a>: animar un personaje con huesos mediante keyframes.</li>
+        </ul>
+        <p class="small">Estos tutoriales se hicieron con versiones anteriores de Unity. El proceso es el mismo, pero algunos menús pueden tener otra ubicación en Unity 6.</p>
+      </div>
+    </details>
+  </div>
+
+  <div class="bone-stages">
+    <article class="card">
+      <h3><span class="stage">Etapa 1</span> Preparar las ilustraciones por partes</h3>
+      <p>El personaje se dibuja con cada parte en una capa separada. Estas son las <b>15 capas reales</b> del archivo <code>NewChar.psb</code> de la niña:</p>
+      <div class="parts-grid" id="partsGrid"><!-- script.js --></div>
+      <p class="small">Otros personajes pueden necesitar más divisiones (por ejemplo muslo y pierna inferior por separado, o dedos). La separación depende del diseño y de los movimientos que se quieran lograr: solo se separa lo que va a moverse por su cuenta.</p>
+    </article>
+
+    <article class="card">
+      <h3><span class="stage">Etapa 2</span> Importar en Unity</h3>
+      <ul class="comp-list">
+        <li>El archivo por capas (<code>.psb</code>) se importa con el paquete <b>2D PSD Importer</b> (instalado: versión 12.0.2).</li>
+        <li>En el Inspector: <b>Sprite Mode: Multiple</b> (una imagen por capa) y <b>Use as Rig</b> activado (prepara el personaje para recibir huesos).</li>
+        <li>El rigging se hace con el paquete <b>2D Animation</b> (instalado: versión 13.0.6), desde <i>Sprite Editor → Skinning Editor</i>.</li>
+      </ul>
+    </article>
+
+    <article class="card">
+      <h3><span class="stage">Etapa 3</span> Crear los huesos</h3>
+      <p>Los huesos representan articulaciones. Al rotar un hueso, se mueven él y todos los que cuelgan de él. Un esquema típico:</p>
+      <div class="tree concept">
+        <div class="tree-title">Esquema conceptual</div>
+        <pre>Cadera
+ └─ Torso
+     ├─ Cuello ─ Cabeza
+     ├─ Brazo ─ Antebrazo ─ Mano   (×2)
+ └─ Muslo ─ Pierna ─ Pie           (×2)</pre>
+      </div>
+      <div class="tree real">
+        <div class="tree-title">Estructura real verificada de la niña</div>
+        <pre>torso (raíz, en la cadera)
+ ├─ chest (pecho)
+ │   ├─ head (cabeza + cabello)
+ │   ├─ arm_upper_L ─ arm_lower_L ─ hand_L
+ │   └─ arm_upper_R ─ arm_lower_R ─ hand_R
+ ├─ leg_L ─ foot_L
+ └─ leg_R ─ foot_R</pre>
+      </div>
+      <p class="small">La niña usa 13 huesos. El niño no tiene huesos: su animación es por sprites.</p>
+    </article>
+
+    <article class="card wide">
+      <h3><span class="stage">Etapa 4</span> Asignar pesos</h3>
+      <p>Los <b>pesos</b> indican cuánto influye cada hueso sobre cada zona del dibujo. En la niña, cada parte sigue al 100 % a su hueso, y el torso mezcla suavemente cadera y pecho para que la respiración no lo rompa.</p>
+      <div class="weights-demo">
+        <canvas id="weightsCanvas" width="520" height="300" aria-label="Demostración de pesos"></canvas>
+        <div class="weights-controls">
+          <span class="tag tag-web">Demostración web</span>
+          <label>Doblar el codo <input type="range" id="elbowAngle" min="-100" max="100" value="55"></label>
+          <div class="seg" role="radiogroup" aria-label="Tipo de pesos">
+            <button class="seg-btn active" data-weights="good" role="radio" aria-checked="true">Pesos bien asignados</button>
+            <button class="seg-btn" data-weights="bad" role="radio" aria-checked="false">Pesos mal asignados</button>
+          </div>
+          <p class="small" id="weightsNote"></p>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <h3><span class="stage">Etapa 5</span> Crear animaciones con poses</h3>
+      <p>Se colocan <b>poses</b> en momentos clave (<i>keyframes</i>) y Unity calcula el movimiento intermedio. Las animaciones reales de la niña:</p>
+      <ul class="comp-list">
+        <li><b>NewChar_Idle</b> (2 s, en bucle): el pecho se expande un 3,5 % (respiración), la cabeza se inclina 1,5° y los brazos se balancean 2,5°.</li>
+        <li><b>NewChar_Clicked</b> (1,3 s, una vez): se agacha, salta, saluda con el brazo derecho moviendo el antebrazo y aterriza.</li>
+      </ul>
+      <p class="small">Solo se animan los huesos: no cambian las imágenes ni el color.</p>
+    </article>
+
+    <article class="card wide">
+      <h3><span class="stage">Etapa 6</span> Sprites frente a huesos</h3>
+      <div class="two-col compare-demo">
+        <div class="demo-tile">
+          <span class="tag tag-web">Demostración web con fotogramas reales</span>
+          <div class="sprite-stage"><img id="spriteDemo" src="assets/images/kid/idle_0.png" alt="Fotograma del niño"></div>
+          <div class="frame-strip" id="frameStrip"></div>
+          <div class="demo-actions">
+            <button class="btn btn-small" data-sprite="idle">Reposo</button>
+            <button class="btn btn-small btn-action-soft" data-sprite="question">Pensar</button>
+          </div>
+          <p><b>Animación por sprites:</b> cambia entre dibujos completos, como un folioscopio. Cada pose nueva necesita un dibujo nuevo.</p>
+        </div>
+        <div class="demo-tile">
+          <span class="tag tag-web">Demostración web con las capas reales</span>
+          <div class="rig-stage" id="rigStage"><!-- script.js --></div>
+          <div class="demo-actions">
+            <button class="btn btn-small" id="rigBones" aria-pressed="false">Mostrar huesos</button>
+            <button class="btn btn-small btn-action-soft" id="rigWave">Saludar</button>
+          </div>
+          <p><b>Animación por huesos:</b> mueve y rota partes articuladas del mismo dibujo. Una sola ilustración sirve para muchos movimientos.</p>
+        </div>
+      </div>
+      <p class="small">Las dos técnicas se pueden combinar, por ejemplo huesos para el cuerpo y sprites para cambiar la boca o los ojos. Estas demostraciones imitan la idea en la web; la versión real está en el <a href="#prototipo">prototipo</a>.</p>
+    </article>
+  </div>
+</section>
+
+<!-- ============ 7. Efecto hover ============ -->
+<section id="hover" data-section>
+  <div class="section-head">
+    <span class="tag tag-blue">Retroalimentación visual</span>
+    <h2>Efecto visual al pasar el cursor</h2>
+    <p>El efecto <b>hover</b> avisa al niño de que ese personaje se puede tocar.</p>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <ol class="numbered">
+        <li><b>Detectar el cursor.</b> En cada fotograma se comprueba si el ratón está dentro del collider del personaje (<code>OverlapPoint</code>).</li>
+        <li><b>Cambiar la apariencia.</b> Mientras está encima se cambia el color del Sprite Renderer. El niño usa un color de hover (1,3; 1,3; 1,3), que lo <b>aclara</b>. La niña aplica un tono cálido a <b>todas</b> sus partes.</li>
+        <li><b>Restaurar.</b> Al salir, se devuelve el color original guardado al inicio.</li>
+      </ol>
+      <pre><code>if (over != isHovering)        // solo cuando entra o sale
+{
+    isHovering = over;
+    spriteRenderer.color = over ? hoverColor : originalColor;
+}</code></pre>
+      <p class="note note-info">Cambiar el color es la opción más simple. Un brillo o contorno más elaborado requiere materiales o <i>shaders</i> (programas que dibujan el sprite).</p>
+      <p class="note note-warn">En pantallas táctiles no existe un cursor que «pase por encima». Allí se suele resaltar mientras el dedo presiona o con un destello breve al tocar.</p>
+    </div>
+    <div class="hover-demo">
+      <span class="tag tag-web">Demostración web</span>
+      <div class="hover-stage" id="hoverStage" tabindex="0" aria-label="Personaje de prueba: pasa el cursor o toca">
+        <img src="assets/images/kid/idle_0.png" alt="Niño del prototipo" id="hoverImg">
+        <span class="hover-tint" id="hoverTint"></span>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="Estilo de hover">
+        <button class="seg-btn active" data-hover="brighten" role="radio" aria-checked="true">Aclarar (como el niño)</button>
+        <button class="seg-btn" data-hover="tint" role="radio" aria-checked="false">Tono cálido (como la niña)</button>
+      </div>
+      <p class="small" id="hoverStatus">Pasa el cursor sobre el niño. En pantalla táctil, tócalo para ver un destello.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8. Audio ============ -->
+<section id="audio" data-section>
+  <div class="section-head">
+    <span class="tag tag-blue">Sonido</span>
+    <h2>Audio y música ambiental</h2>
+    <p>El prototipo tiene dos tipos de audio. Los reproductores usan los <b>archivos reales</b> del proyecto.</p>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <h3>🔔 Efecto de sonido: «pensar»</h3>
+      <ul class="comp-list">
+        <li>Archivo: <code>sonido_pensar_kid.wav</code> (1,1 s).</li>
+        <li>Está en un <b>Audio Source</b> del niño con <i>Play On Awake</i> y <i>Loop</i> desactivados, en sonido 2D.</li>
+        <li>Suena al hacer clic sobre el niño, a la vez que la animación.</li>
+      </ul>
+      <pre><code>// Reproduce el clip sin cortar otro que ya esté sonando
+audioSource.PlayOneShot(audioSource.clip);</code></pre>
+      <audio controls preload="none" src="assets/audio/sonido_pensar_kid.wav"></audio>
+    </div>
+    <div class="card">
+      <h3>🎵 Música de fondo</h3>
+      <ul class="comp-list">
+        <li>Archivo: <code>musica_fondo_cuentos_que_sienten.wav</code> (24 s).</li>
+        <li>Está en un <b>Audio Source</b> de la cámara con <i>Play On Awake</i> activado y volumen 0,195, para no tapar los efectos ni las futuras voces.</li>
+        <li><b>Loop está desactivado</b>, así que suena una vez y se detiene. Para que sea ambiente continuo hay que activar <i>Loop</i>.</li>
+      </ul>
+      <audio controls preload="none" src="assets/audio/musica_fondo_cuentos_que_sienten.wav"></audio>
+    </div>
+  </div>
+
+  <div class="card info-card">
+    <h3>Importar un audio no es lo mismo que reproducirlo</h3>
+    <div class="two-col">
+      <p><b>Importar</b> es arrastrar el archivo a la carpeta del proyecto. Unity lo convierte en un <i>AudioClip</i> y aplica opciones de compresión y carga, pero el clip no suena por sí solo.</p>
+      <p><b>Reproducir</b> requiere un componente <b>Audio Source</b> en la escena que tenga ese clip y una orden: <i>Play On Awake</i> al iniciar, o <code>Play()</code> / <code>PlayOneShot()</code> desde un script.</p>
+    </div>
+    <p class="small">En la web, los navegadores no permiten sonido hasta que el usuario hace clic o toca la página. Por eso, en el prototipo WebGL, la música empieza tras la primera interacción.</p>
+  </div>
+</section>
+
+<!-- ============ 11. Arquitectura ============ -->
+<section id="arquitectura" data-section>
+  <div class="section-head">
+    <span class="tag tag-blue">Arquitectura conceptual</span>
+    <h2>Arquitectura y posibilidad de ampliación</h2>
+    <p>Selecciona cada bloque. Organizar el sistema por piezas separadas permite agregar personajes, objetos y animaciones sin reescribir todo.</p>
+  </div>
+  <div class="arch" id="archDiagram"><!-- script.js --></div>
+  <div class="card" id="archPanel" aria-live="polite"></div>
+  <p class="small">Diagrama conceptual. Hoy cada personaje tiene su propio script que hace detección, acción, animación y sonido juntos; la separación en bloques es la organización propuesta para la siguiente fase.</p>
+</section>
+
+<!-- ============ 12. Conclusiones ============ -->
+<section id="conclusiones" data-section>
+  <div class="section-head">
+    <span class="tag tag-green">Cierre</span>
+    <h2>Conclusiones y siguientes pasos</h2>
+  </div>
+  <div class="cards-grid conclusions">
+    <div class="card"><h3>🎯 Qué demuestra el prototipo</h3><p>Una escena ilustrada con personajes vivos que reaccionan al usuario con animación y sonido, y que se puede ejecutar en el navegador.</p></div>
+    <div class="card"><h3>✅ Sistemas validados</h3><p>Animación de reposo, detección de clic sobre el personaje, cambio de animación con Trigger, regreso al reposo, hover, efecto de sonido y animación por huesos.</p></div>
+    <div class="card"><h3>📦 Recursos por integrar o revisar</h3><p>Ilustraciones definitivas, animaciones del animador, audios finales del ingeniero de sonido y música en bucle.</p></div>
+    <div class="card"><h3>🛠 Funciones pendientes</h3><p>Toque en pantallas táctiles, doble toque, objetos interactivos, sincronización fina de audio, más escenas y transiciones.</p></div>
+    <div class="card highlight"><h3>🤝 Decisiones a acordar</h3>
+      <ul class="comp-list">
+        <li>Dispositivo final: tableta, celular, PC o pantalla táctil.</li>
+        <li>Técnica por personaje: sprites, huesos o combinación.</li>
+        <li>Si el primer toque responde de inmediato o espera un posible doble toque.</li>
+        <li>Voces o narración, idiomas y formato de entrega de audio.</li>
+        <li>Número de escenas y acciones por escena.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="hero-actions center">
+    <a class="btn btn-action" href="#prototipo">▶ Volver al prototipo</a>
+    <a class="btn btn-ghost" href="#temas">Revisar los temas a tratar</a>
+  </div>
+</section>
+
+</main>
+
+<footer class="footer">
+  <p><b>Cuentos que Sienten</b> · Presentación del prototipo · Unity 6.3 LTS (6000.3.27f1)</p>
+  <details>
+    <summary>Recursos utilizados y su procedencia</summary>
+    <ul class="small">
+      <li>Fotogramas del niño: hoja de sprites <i>Hoja de sprites_ niño chibi animado.png</i> del proyecto.</li>
+      <li>Niña por capas: archivo <i>Assets/Characters/NewChar/NewChar.psb</i> del proyecto.</li>
+      <li>Captura de escena: Game View de <i>SampleScene</i>.</li>
+      <li>Audio: <i>sonido_pensar_kid.wav</i> y <i>musica_fondo_cuentos_que_sienten.wav</i> del proyecto.</li>
+      <li>Tipografías: Baloo 2 y Nunito (Google Fonts).</li>
+    </ul>
+  </details>
+</footer>
+
+<script src="script.js?v=6"></script>
+</body>
+</html>
