@@ -304,7 +304,7 @@ ui.restart.addEventListener("click", restartUnity);
 ui.fullscreen.addEventListener("click", () => { if (unityInstance) unityInstance.SetFullscreen(1); });
 
 /* ---------------------------------------------------------
-   5. Temas a tratar: lo que falta y cómo hacerlo
+   5. Posibles cambios o implementaciones y cómo hacerlos
    --------------------------------------------------------- */
 const TOPIC_GROUPS = { all: "Todos", interaccion: "Interacción", audio: "Audio", contenido: "Contenido", calidad: "Pruebas y entrega" };
 const TOPICS = [

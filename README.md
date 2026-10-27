@@ -138,5 +138,5 @@ unityInstance.SendMessage("WebBridge", "PlayKidAction", "IsClicked");
 - [ ] Revisar el objeto hijo `Idle/Audio Source`. Tiene el mismo clip `sonido_pensar_kid`, pero `IsCliked.cs` usa el Audio Source del propio objeto `Idle`, así que este hijo no se usa.
 - [ ] Adaptar la entrada a pantallas táctiles antes de presentarlo en tabletas.
 - [ ] Sustituir las ilustraciones, animaciones y audios de prueba por los definitivos del cliente.
-- [ ] Actualizar la lista de temas a tratar (`TOPICS` en `script.js`) cuando se resuelva cada punto.
+- [ ] Actualizar la lista de posibles cambios (`TOPICS` en `script.js`) cuando se resuelva cada punto.
 - [ ] Al modificar `styles.css` o `script.js`, subir el número de versión (`?v=11` en styles.css) en `index.html` para que los navegadores no muestren la copia vieja guardada en caché.
