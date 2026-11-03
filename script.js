@@ -628,11 +628,7 @@ let methodIdx = 2; // abre en la recomendada
 const methodTabs = $("#methodTabs");
 methodTabs.innerHTML = INPUT_METHODS.map((m, i) =>
   `<button class="seg-btn" role="tab" id="method-tab-${i}" aria-controls="methodPanel" data-i="${i}"><b>${m.id}.</b> ${m.t}</button>`).join("");
-function renderMethod() {
-  const m = INPUT_METHODS[methodIdx];
-  $$("button", methodTabs).forEach((b, i) => { b.classList.toggle("active", i === methodIdx); b.setAttribute("aria-selected", i === methodIdx); });
-  $("#methodPanel").setAttribute("aria-labelledby", "method-tab-" + methodIdx);
-  $("#methodPanel").innerHTML = `<div class="panel-anim">
+const methodHTML = m => `<div class="panel-anim">
     <div class="method-head"><h3>${m.id}. ${m.t}</h3><span class="chip ${m.id === "C" ? "chip-done" : "chip-topic"}">${m.sub}</span></div>
     <p>${m.what}</p>
     <div class="method-grid">
@@ -643,6 +639,10 @@ function renderMethod() {
       <div class="pros"><h4>Ventajas</h4><ul>${m.pros.map(s => `<li>${s}</li>`).join("")}</ul></div>
       <div class="cons"><h4>A tener en cuenta</h4><ul>${m.cons.map(s => `<li>${s}</li>`).join("")}</ul></div>
     </div></div>`;
+function renderMethod() {
+  $$("button", methodTabs).forEach((b, i) => { b.classList.toggle("active", i === methodIdx); b.setAttribute("aria-selected", i === methodIdx); });
+  $("#methodPanel").setAttribute("aria-labelledby", "method-tab-" + methodIdx);
+  $("#methodPanel").innerHTML = methodHTML(INPUT_METHODS[methodIdx]);
 }
 methodTabs.addEventListener("click", e => { const b = e.target.closest("button"); if (b) { methodIdx = +b.dataset.i; renderMethod(); } });
 renderMethod();
@@ -717,6 +717,10 @@ const VIDEOS = {
     note: "<b>¿Hace falta un .fbx?</b> No. Con huesos 2D el esqueleto se crea dentro de Unity sobre el .psb, así que no se exporta nada desde otro programa. El <b>.fbx</b> solo se necesita cuando el personaje llega ya armado desde un programa 3D (Blender, Maya, Mixamo) con su esqueleto y sus animaciones: ver la diapositiva <a href=\"#recursos\">Recursos ya hechos</a>. También sirve <b>.psd</b>, pero <b>.psb</b> admite archivos más grandes y es el que recomienda Unity.",
   },
 };
+// Lista de archivos de un proceso (se usa en la diapositiva y en la versión para imprimir)
+const videoFilesHTML = (v, title = "Archivos que usa este proceso") => `<h4>${title}</h4>
+  <ul class="file-grid">${v.files.map(([ext, name, desc]) => `<li class="file-chip"><span class="ext ext-${ext}">.${ext}</span><div><b>${name}</b><span>${desc}</span></div></li>`).join("")}</ul>
+  <p class="note note-info">${v.note}</p>`;
 (function videos() {
   const video = $("#howtoVideo");
   const list = $("#videoChapters");
@@ -730,9 +734,7 @@ const VIDEOS = {
     video.querySelector("source").src = `assets/video/${key}.mp4?v=${VIDEO_VERSION}`;
     video.load();
     list.innerHTML = v.chapters.map(([t, name], i) => `<li><button data-t="${t}" data-i="${i}">${name}</button></li>`).join("");
-    $("#videoFiles").innerHTML = `<h4>Archivos que usa este proceso</h4>
-      <ul class="file-grid">${v.files.map(([ext, name, desc]) => `<li class="file-chip"><span class="ext ext-${ext}">.${ext}</span><div><b>${name}</b><span>${desc}</span></div></li>`).join("")}</ul>
-      <p class="note note-info">${v.note}</p>`;
+    $("#videoFiles").innerHTML = videoFilesHTML(v);
     $$("[data-video]").forEach(b => { const on = b.dataset.video === key; b.classList.toggle("active", on); b.setAttribute("aria-selected", on); });
   }
   $$("[data-video]").forEach(b => b.addEventListener("click", () => load(b.dataset.video)));
@@ -1097,3 +1099,26 @@ renderArch(0);
    14. Abrir en la diapositiva del enlace (por ejemplo …/#prototipo) o en la portada
    --------------------------------------------------------- */
 showSlide(Math.max(0, indexOfId(location.hash.slice(1))), { updateHash: false });
+
+/* ---------------------------------------------------------
+   15. Versión para imprimir o guardar en PDF (Ctrl+P, o ?pdf en la dirección)
+   Muestra todo lo que en pantalla está detrás de pestañas o pasos.
+   --------------------------------------------------------- */
+function preparePrint() {
+  if (document.body.classList.contains("print-mode")) return;
+  document.body.classList.add("print-mode");
+  topicFilter = "all";
+  renderTopics();
+  $$("details").forEach(d => { d.open = true; });
+  $("#flowPanel").innerHTML = FLOW.map((f, i) => `<p><b>${i + 1}. ${f.t}.</b> ${f.b}</p>`).join("");
+  $("#methodPanel").innerHTML = INPUT_METHODS.map(methodHTML).join("");
+  $("#archPanel").innerHTML = ARCH.map(a => `<h3>${a.t}</h3><p>${a.b}</p>`).join("");
+  $("#videoFiles").innerHTML = Object.values(VIDEOS).map(v => videoFilesHTML(v, `Archivos · ${v.title}`)).join("");
+  $$(".asset-panel").forEach(p => {
+    p.hidden = false;
+    const tab = $(`[data-asset="${p.id.replace("asset-", "")}"]`);
+    p.insertAdjacentHTML("afterbegin", `<h3 class="print-title">${tab.textContent}</h3>`);
+  });
+}
+addEventListener("beforeprint", preparePrint);
+if (new URLSearchParams(location.search).has("pdf")) preparePrint();

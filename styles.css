@@ -440,3 +440,27 @@ audio { width: 100%; margin-top: 10px; color-scheme: light; }
 .formats-table .ext { min-width: 0; margin-right: 4px; }
 .asset-tabs { margin: 18px 0 14px; }
 .asset-panel > .two-col + .two-col, .asset-panel > .note + .two-col { margin-top: 18px; }
+
+
+/* ---------------- Versión para imprimir / PDF ---------------- */
+.print-only { display: none; }
+@page { size: 1440px 900px; margin: 0; }
+@media print {
+  html, body { height: auto; overflow: visible; background: var(--bg); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .topbar, .thumbbar, .deck-arrow, .player-controls, .panel-nav, .video-tabs, .asset-tabs, .method-tabs,
+  .topic-filters, .stepper-list, .demo-actions, .hero-hint, .float-card .btn, audio, #startUnity, #buildSizeNote, .video-layout, .weights-controls .seg { display: none !important; }
+  .print-only { display: block; }
+  .deck { position: static; }
+  .slide { position: relative; inset: auto; opacity: 1 !important; visibility: visible !important; transform: none !important; overflow: visible; break-after: page; }
+  .slide-inner { height: auto; overflow: visible; padding: 48px 72px; }
+  .slide-hero { height: 900px; break-inside: avoid; }
+  .player-card, .file-chip, .flow-visual, table tr, pre, h2, h3, h4 { break-inside: avoid; }
+  h2, h3, h4 { break-after: avoid; }
+  .accordion summary::after { display: none; }
+  .stepper { grid-template-columns: minmax(0, 1fr); }
+  .stepper-panel { grid-template-columns: 170px minmax(0, 1fr); }
+  .asset-panel { margin-top: 26px; }
+  .print-title { font-size: 1.4rem; margin: 0 0 14px; }
+  .unity-poster { filter: none; }
+  .print-callout { background: rgba(255, 255, 255, .94); color: var(--ink); padding: 14px 20px; border-radius: 14px; font-size: 1rem; }
+}
